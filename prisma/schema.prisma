@@ -1,0 +1,1183 @@
+// Marketplace B2B SAP - Schema de Base de Datos
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "../node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// Enums para tipos de datos
+enum UserType {
+  CLIENT     // Empresas que necesitan servicios SAP
+  PROVIDER   // Empresas consultoras SAP
+  ADMIN      // Administradores del sistema
+}
+
+enum CertificationLevel {
+  ASSOCIATE
+  SPECIALIST  
+  PROFESSIONAL
+}
+
+enum PartnerLevel {
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum ApprovalStatus {
+  NOT_STARTED
+  PENDING
+  APPROVED
+  REJECTED
+  UNDER_REVIEW
+}
+
+enum CompetencyLevel {
+  ESSENTIAL
+  ADVANCED
+  EXPERT
+}
+
+enum ProjectStatus {
+  DRAFT
+  PUBLISHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum QuotationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum MessageType {
+  TEXT
+  FILE
+  SYSTEM
+}
+
+enum NotificationType {
+  NEW_PROJECT
+  NEW_QUOTATION
+  MESSAGE_RECEIVED
+  PROJECT_UPDATE
+  PAYMENT_UPDATE
+  PAYMENT_RECEIVED
+  WALLET_TOPUP
+  WALLET_WITHDRAWAL
+  TRANSFER_SENT
+  TRANSFER_RECEIVED
+  INVOICE_RECEIVED
+  INVOICE_SENT
+  DISPUTE_CREATED
+  DISPUTE_MESSAGE
+  DISPUTE_EVIDENCE
+  DISPUTE_ASSIGNED
+  PAYMENT_METHOD_ADDED
+}
+
+
+
+// Modelo principal de usuarios
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String
+  userType      UserType
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Perfiles específicos
+  clientProfile    ClientProfile?
+  providerProfile  ProviderProfile?
+
+  // Relaciones de actividad
+  projects         Project[]
+  quotations       Quotation[]
+  messagesSent     Message[] @relation("MessageSender")
+  messagesReceived Message[] @relation("MessageReceiver")
+  notifications    Notification[]
+  reviews          Review[]
+  reviewsReceived  Review[] @relation("ReviewTarget")
+  dueDiligences    DueDiligence[]
+  clientContracts  Contract[] @relation("ClientContracts")
+  providerContracts Contract[] @relation("ProviderContracts")
+  
+  // Nuevas relaciones para sistema de reviews avanzado
+  reviewVotes          ReviewVote[] @relation("ReviewVotes")
+  reviewReports        ReviewReport[] @relation("ReviewReports")
+  reviewsModerator     Review[] @relation("ReviewsModerator")
+  reportResolutions    ReviewReport[] @relation("ReportResolver")
+  userRating           UserRating? @relation("UserRatings")
+
+  // Payment system relations
+  escrowTransactionsPayer     EscrowTransaction[] @relation("EscrowPayer")
+  escrowTransactionsPayee     EscrowTransaction[] @relation("EscrowPayee")
+  wallet                      Wallet?
+  walletTransactionsRelated   WalletTransaction[] @relation("WalletTransactionRelated")
+  invoicesIssued             Invoice[] @relation("InvoiceIssuer")
+  invoicesReceived           Invoice[] @relation("InvoiceRecipient")
+  disputesCreated            Dispute[] @relation("DisputeCreator")
+  disputesRespondent         Dispute[] @relation("DisputeRespondent")
+  disputeMessages            DisputeMessage[] @relation("DisputeMessageSender")
+  disputeEvidenceUploaded    DisputeEvidence[] @relation("DisputeEvidenceUploader")
+
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  // Chatbot relations  
+  chatSessions ChatSession[] @relation("ChatSessions")
+
+  @@map("users")
+}
+
+// Perfil específico para clientes (empresas que necesitan SAP)
+model ClientProfile {
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyName   String
+  industry      String
+  companySize   String  // Small, Medium, Large, Enterprise
+  website       String?
+  description   String?
+  logo          String?
+  country       String
+  city          String
+  
+  // Información de contacto
+  contactName   String
+  contactTitle  String
+  phoneNumber   String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("client_profiles")
+}
+
+// Perfil específico para proveedores (consultoras SAP)
+model ProviderProfile {
+  id                String       @id @default(cuid())
+  userId            String       @unique
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyName       String
+  description       String
+  website           String?
+  logo              String?
+  country           String
+  city              String
+  foundedYear       Int?
+  employeeCount     String       // 1-10, 11-50, 51-200, 200+
+  
+  // SAP Partner Information
+  isPartner         Boolean      @default(false)
+  partnerLevel      PartnerLevel?
+  partnerSince      DateTime?
+  
+  // Competencias y especialidades
+  averageRating     Float        @default(0)
+  totalProjects     Int          @default(0)
+  totalReviews      Int          @default(0)
+  
+  // Onboarding y verificación
+  verified          Boolean      @default(false)
+  approvalStatus    ApprovalStatus @default(NOT_STARTED)
+  sapSpecializations String[]     @default([])  // Array de especializaciones SAP
+  targetIndustries  String[]     @default([])  // Array de industrias
+  
+  // Información de contacto adicional
+  contactName       String?
+  contactTitle      String?
+  phoneNumber       String?
+  linkedinProfile   String?
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  // Relaciones
+  certifications    Certification[]
+  competencies      ProviderCompetency[]
+  specializations   ProviderSpecialization[]
+  portfolioItems    PortfolioItem[]
+
+  @@map("provider_profiles")
+}
+
+// Certificaciones SAP individuales
+model Certification {
+  id                String            @id @default(cuid())
+  providerId        String
+  provider          ProviderProfile   @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  
+  module            String            // Módulo SAP (FI, SD, MM, PP, etc.)
+  level             CertificationLevel
+  consultant        String            // Nombre del consultor certificado
+  certificationNumber String?         // Número de certificación
+  obtainedDate      DateTime?
+  expiryDate        DateTime?
+  verified          Boolean           @default(false)
+  
+  // Campos legacy para compatibilidad
+  name              String?           // Nombre de la certificación
+  sapModule         String?           // FI, SD, MM, PP, etc.
+  certificateId     String?           // ID del certificado SAP
+  isVerified        Boolean           @default(false)
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("certifications")
+}
+
+// Competencias del nuevo framework SAP
+model ProviderCompetency {
+  id              String          @id @default(cuid())
+  providerId      String
+  provider        ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  
+  lobName         String          // Lines of Business: Finance, Supply Chain, etc.
+  level           CompetencyLevel
+  isVerified      Boolean         @default(false)
+  obtainedDate    DateTime
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([providerId, lobName])
+  @@map("provider_competencies")
+}
+
+// Especializaciones específicas
+model ProviderSpecialization {
+  id              String          @id @default(cuid())
+  providerId      String
+  provider        ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  
+  name            String          // SAP S/4HANA Central Procurement, etc.
+  sapProduct      String          // S/4HANA, SuccessFactors, Ariba, etc.
+  isVerified      Boolean         @default(false)
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([providerId, name])
+  @@map("provider_specializations")
+}
+
+// Portfolio de proyectos de proveedores
+model PortfolioItem {
+  id              String          @id @default(cuid())
+  providerId      String
+  provider        ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String
+  industry        String
+  sapModules      String[]        // Array de módulos utilizados
+  methodology     String          // ASAP, SAP Activate
+  projectValue    String?         // Range: 10K-50K, 50K-100K, etc.
+  duration        String          // 3-6 months, 6-12 months, etc.
+  teamSize        String?
+  clientTestimonial String?
+  screenshot      String?
+  
+  startDate       DateTime
+  endDate         DateTime
+  isPublic        Boolean         @default(true)
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("portfolio_items")
+}
+
+// Proyectos publicados por clientes
+model Project {
+  id              String        @id @default(cuid())
+  clientId        String
+  client          User          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String
+  requirements    String        // Requerimientos detallados
+  
+  // Información del proyecto
+  industry        String
+  sapModules      String[]      // Módulos requeridos
+  methodology     String?       // Preferencia de metodología
+  budget          String        // Budget range
+  timeline        String        // Timeline estimado
+  teamSize        String?       // Tamaño de equipo requerido
+  
+  // Detalles técnicos adicionales
+  implementationType String?    // new, upgrade, migration, optimization
+  cloudPreference    String?    // onPremise, cloud, hybrid, noPreference
+  
+  // Contexto de negocio
+  businessProcesses      String[] @default([])  // Procesos de negocio prioritarios
+  complianceRequirements String[] @default([])  // Requerimientos de compliance
+  integrationNeeds       String[] @default([])  // Necesidades de integración
+  
+  // Estado y fechas
+  status          ProjectStatus @default(DRAFT)
+  publishedAt     DateTime?
+  deadline        DateTime?
+  
+  // Ubicación
+  country         String
+  city            String?
+  isRemote        Boolean       @default(false)
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relaciones
+  quotations      Quotation[]
+  conversations   Conversation[]
+  reviews         Review[]
+
+  @@map("projects")
+}
+
+// Cotizaciones de proveedores
+model Quotation {
+  id              String          @id @default(cuid())
+  projectId       String
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  providerId      String
+  provider        User            @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  
+  // Detalles de la propuesta
+  title           String
+  description     String
+  approach        String          // Enfoque técnico
+  timeline        String          // Timeline propuesto
+  totalCost       Decimal
+  currency        String          @default("USD")
+  
+  // Desglose detallado de costos
+  costBreakdown   Json?           // JSON con desglose por módulos/fases
+  
+  // Desglose del equipo
+  teamComposition Json?           // JSON con roles, experiencia y certificaciones
+  methodology     String          // ASAP, SAP Activate
+  
+  // Propuesta técnica detallada
+  technicalProposal Json?         // JSON con detalles técnicos específicos
+  deliverables      String[]      @default([])  // Lista de entregables
+  milestones        Json?         // JSON con hitos del proyecto
+  
+  // Términos comerciales
+  paymentTerms      String
+  includedServices  String[]      // Lista de servicios incluidos
+  excludedServices  String[]      @default([])  // Servicios no incluidos
+  assumptions       String?       // Asunciones del proyecto
+  risks             String[]      @default([])  // Riesgos identificados
+  
+  // Información adicional
+  companyPresentation String?     // URL o texto de presentación
+  similarProjects     Json?       // JSON con proyectos similares
+  certifications      String[]    @default([])  // Certificaciones relevantes
+  
+  // Matching y scoring
+  matchingScore       Float?      // Score de matching con el proyecto
+  clientFeedback      Json?       // JSON con feedback del cliente
+  
+  status          QuotationStatus @default(PENDING)
+  
+  // Fechas importantes
+  validUntil      DateTime
+  submittedAt     DateTime        @default(now())
+  respondedAt     DateTime?
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relaciones con nuevos modelos
+  dueDiligence    DueDiligence?
+  contract        Contract?
+  reviews         Review[]
+
+  @@unique([projectId, providerId])
+  @@map("quotations")
+}
+
+// Due Diligence de proveedores
+model DueDiligence {
+  id              String          @id @default(cuid())
+  providerId      String
+  provider        User            @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  quotationId     String          @unique
+  quotation       Quotation       @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  
+  // Verificaciones automáticas
+  credentialsVerified     Boolean   @default(false)
+  certificationsValid     Boolean   @default(false)
+  referencesChecked       Boolean   @default(false)
+  financialStatusOk       Boolean   @default(false)
+  legalComplianceOk       Boolean   @default(false)
+  
+  // Scores automáticos
+  reliabilityScore        Float?    // 0-100
+  experienceScore         Float?    // 0-100  
+  performanceScore        Float?    // 0-100
+  overallScore            Float?    // 0-100
+  
+  // Detalles de verificación
+  verificationDetails     Json?     // JSON con detalles específicos
+  referenceContacts       Json?     // JSON con contactos de referencias
+  certificationDetails    Json?     // JSON con detalles de certificaciones
+  riskAssessment          Json?     // JSON con evaluación de riesgos
+  
+  // Resultados y notas
+  status                  DueDiligenceStatus @default(PENDING)
+  notes                   String?
+  approvedBy              String?   // ID del usuario que aprobó
+  rejectionReason         String?
+  
+  // Fechas
+  startedAt              DateTime   @default(now())
+  completedAt            DateTime?
+  
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  @@map("due_diligences")
+}
+
+// Contratos entre clientes y proveedores
+model Contract {
+  id              String          @id @default(cuid())
+  quotationId     String          @unique
+  quotation       Quotation       @relation(fields: [quotationId], references: [id])
+  clientId        String
+  client          User            @relation("ClientContracts", fields: [clientId], references: [id])
+  providerId      String
+  provider        User            @relation("ProviderContracts", fields: [providerId], references: [id])
+  
+  // Información del contrato
+  contractNumber  String          @unique
+  title           String
+  description     String
+  
+  // Términos financieros
+  totalValue      Decimal
+  currency        String          @default("USD")
+  paymentTerms    String
+  paymentSchedule Json?           // JSON con cronograma de pagos
+  
+  // Términos del proyecto
+  startDate       DateTime
+  endDate         DateTime
+  milestones      Json            // JSON con hitos del proyecto
+  deliverables    String[]        // Lista de entregables
+  
+  // Términos legales
+  contractTerms   Json            // JSON con términos y condiciones
+  slaTerms        Json?           // JSON with SLA terms
+  guaranteeTerms  Json?           // JSON con términos de garantía
+  penaltyClause   String?         // Cláusulas de penalización
+  
+  // Gestión del contrato
+  status          ContractStatus  @default(DRAFT)
+  templateUsed    String?         // Template usado para generar
+  
+  // Firmas digitales
+  clientSigned    Boolean         @default(false)
+  providerSigned  Boolean         @default(false)
+  clientSignedAt  DateTime?
+  providerSignedAt DateTime?
+  clientSignature String?         // Hash o referencia de la firma
+  providerSignature String?       // Hash o referencia de la firma
+  
+  // Ejecución del contrato
+  progressTracking Json?          // JSON con seguimiento de progreso
+  paymentHistory   Json?          // JSON con historial de pagos
+  changeOrders     Json?          // JSON con órdenes de cambio
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relaciones
+  payments          Payment[]
+  milestoneUpdates  MilestoneUpdate[]
+  escrowTransactions EscrowTransaction[]
+  reviews           Review[]
+
+  @@map("contracts")
+}
+
+// Pagos del contrato
+model Payment {
+  id              String          @id @default(cuid())
+  contractId      String
+  contract        Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  
+  // Información del pago
+  amount          Decimal
+  currency        String          @default("USD")
+  description     String
+  milestoneId     String?         // ID del milestone asociado
+  
+  // Estado del pago
+  status          PaymentStatus   @default(PENDING)
+  dueDate         DateTime
+  paidDate        DateTime?
+  paymentMethod   String?
+  transactionRef  String?         // Referencia de la transacción
+  
+  // Notas y documentos
+  notes           String?
+  invoiceRef      String?
+  documents       String[]        @default([])
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("payments")
+}
+
+// Actualizaciones de hitos
+model MilestoneUpdate {
+  id              String          @id @default(cuid())
+  contractId      String
+  contract        Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  
+  // Información del hito
+  milestoneId     String          // ID del hito en el JSON del contrato
+  milestoneName   String
+  description     String?
+  
+  // Estado y progreso
+  status          MilestoneStatus @default(NOT_STARTED)
+  progressPercent Float           @default(0)
+  completedAt     DateTime?
+  
+  // Documentación
+  deliverables    String[]        @default([])
+  notes           String?
+  attachments     String[]        @default([])
+  
+  // Aprobación
+  approvedBy      String?         // ID del usuario que aprobó
+  approvedAt      DateTime?
+  rejectionReason String?
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("milestone_updates")
+}
+
+// Enums para los nuevos modelos
+enum DueDiligenceStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+  REJECTED
+}
+
+enum ContractStatus {
+  DRAFT
+  PENDING_SIGNATURES
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+  DISPUTED
+}
+
+enum MilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PENDING_APPROVAL
+  COMPLETED
+  DELAYED
+  CANCELLED
+}
+
+// Conversaciones entre usuarios
+model Conversation {
+  id              String    @id @default(cuid())
+  projectId       String?
+  project         Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  // Participantes
+  clientId        String
+  providerId      String
+  
+  // Metadata
+  subject         String?
+  isActive        Boolean   @default(true)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relaciones
+  messages        Message[]
+
+  @@unique([projectId, clientId, providerId])
+  @@map("conversations")
+}
+
+// Mensajes dentro de conversaciones
+model Message {
+  id              String      @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  senderId        String
+  sender          User        @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId      String
+  receiver        User        @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  content         String
+  messageType     MessageType @default(TEXT)
+  attachmentUrl   String?
+  
+  isRead          Boolean     @default(false)
+  readAt          DateTime?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@map("messages")
+}
+
+// Notificaciones del sistema
+model Notification {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type            NotificationType
+  title           String
+  message         String
+  data            Json?             // Datos adicionales en JSON
+  
+  isRead          Boolean           @default(false)
+  readAt          DateTime?
+  
+  createdAt       DateTime          @default(now())
+
+  @@map("notifications")
+}
+
+// ========================================
+// REVIEWS Y CALIFICACIONES SISTEMA BIDIRECCIONAL VERIFICADO
+// ========================================
+
+model Review {
+  id                String   @id @default(cuid())
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  quotationId       String?
+  quotation         Quotation? @relation(fields: [quotationId], references: [id])
+  contractId        String?
+  contract          Contract? @relation(fields: [contractId], references: [id])
+  
+  // Reviewer y Reviewee (sistema bidireccional)
+  reviewerId        String
+  reviewer          User     @relation(fields: [reviewerId], references: [id])
+  targetId          String    // Mantenemos para compatibilidad
+  target            User     @relation("ReviewTarget", fields: [targetId], references: [id])
+  
+  // Tipo de review bidireccional
+  reviewType        ReviewType
+  
+  // Calificaciones detalladas (1-5 estrellas cada una)
+  overallRating     Int      @default(5)
+  communicationRating Int?   @default(5)
+  qualityRating     Int?     @default(5)
+  timelinessRating  Int?     @default(5)
+  professionalismRating Int? @default(5)
+  valueRating       Int?     @default(5)
+  technicalRating   Int?     @default(5)
+  
+  // Contenido del review
+  title             String?
+  comment           String
+  pros              String[]
+  cons              String[]
+  wouldRecommend    Boolean  @default(true)
+  
+  // Verificación automática
+  isVerified        Boolean  @default(false)
+  verifiedAt        DateTime?
+  verificationMethod String?  // PROJECT_COMPLETION, PAYMENT_CONFIRMED, MANUAL
+  
+  // Moderación de contenido
+  isModerated       Boolean  @default(false)
+  moderatedAt       DateTime?
+  moderatedById     String?
+  moderatedBy       User?    @relation("ReviewsModerator", fields: [moderatedById], references: [id])
+  moderationNotes   String?
+  moderationFlags   String[] // INAPPROPRIATE, FAKE, SPAM, etc.
+  
+  // Estado y visibilidad
+  status            ReviewStatus @default(PENDING)
+  visibility        ReviewVisibility @default(PUBLIC)
+  
+  // Respuesta del reviewee
+  response          String?
+  respondedAt       DateTime?
+  
+  // Métricas de utilidad
+  helpfulVotes      Int      @default(0)
+  unhelpfulVotes    Int      @default(0)
+  viewCount         Int      @default(0)
+  
+  // Sistema de reportes
+  reportCount       Int      @default(0)
+  isReported        Boolean  @default(false)
+  reportReasons     String[]
+  
+  // Metadatos adicionales
+  projectValue      Float?
+  projectDuration   Int?     // En días
+  sapModules        String[] // Módulos SAP involucrados
+  
+  isPublic          Boolean  @default(true) // Compatibilidad
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relaciones adicionales
+  reviewVotes       ReviewVote[]
+  reviewReports     ReviewReport[]
+  
+  @@unique([reviewerId, targetId, projectId])
+  @@index([targetId, status, visibility])
+  @@index([reviewerId, createdAt])
+  @@index([overallRating, createdAt])
+  @@index([projectId, reviewType])
+  @@map("reviews")
+}
+
+model ReviewVote {
+  id        String    @id @default(cuid())
+  reviewId  String
+  review    Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation("ReviewVotes", fields: [userId], references: [id])
+  isHelpful Boolean   // true = helpful, false = unhelpful
+  createdAt DateTime  @default(now())
+  
+  @@unique([reviewId, userId])
+  @@map("review_votes")
+}
+
+model ReviewReport {
+  id          String      @id @default(cuid())
+  reviewId    String
+  review      Review      @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reporterId  String
+  reporter    User        @relation("ReviewReports", fields: [reporterId], references: [id])
+  reason      ReportReason
+  description String?
+  status      ReportStatus @default(PENDING)
+  resolvedAt  DateTime?
+  resolvedById String?
+  resolvedBy  User?       @relation("ReportResolver", fields: [resolvedById], references: [id])
+  resolution  String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  @@map("review_reports")
+}
+
+// Agregaciones de calificaciones por usuario
+model UserRating {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation("UserRatings", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Promedios generales
+  averageRating         Float    @default(0)
+  totalReviews          Int      @default(0)
+  totalReviewsReceived  Int      @default(0)
+  
+  // Calificaciones por categoría
+  avgCommunication      Float    @default(0)
+  avgQuality            Float    @default(0)
+  avgTimeliness         Float    @default(0)
+  avgProfessionalism    Float    @default(0)
+  avgValue              Float    @default(0)
+  avgTechnical          Float    @default(0)
+  
+  // Estadísticas por tipo de review
+  clientReviews         Int      @default(0)
+  providerReviews       Int      @default(0)
+  recommendationRate    Float    @default(0) // % de recomendaciones
+  
+  // Distribución de calificaciones (1-5 estrellas)
+  fiveStarCount         Int      @default(0)
+  fourStarCount         Int      @default(0)
+  threeStarCount        Int      @default(0)
+  twoStarCount          Int      @default(0)
+  oneStarCount          Int      @default(0)
+  
+  // Verificaciones y credibilidad
+  verifiedReviewsCount  Int      @default(0)
+  responseRate          Float    @default(0) // % de respuestas a reviews
+  
+  lastReviewAt          DateTime?
+  updatedAt             DateTime @updatedAt
+  
+  @@map("user_ratings")
+}
+
+enum ReviewType {
+  CLIENT_TO_PROVIDER  // Cliente califica al proveedor
+  PROVIDER_TO_CLIENT  // Proveedor califica al cliente
+}
+
+enum ReviewStatus {
+  PENDING             // Pendiente de verificación/moderación
+  VERIFIED            // Verificado automáticamente
+  APPROVED            // Aprobado por moderador
+  REJECTED            // Rechazado
+  HIDDEN              // Oculto temporalmente
+  FLAGGED             // Marcado para revisión
+}
+
+enum ReviewVisibility {
+  PUBLIC              // Visible para todos
+  REGISTERED          // Solo usuarios registrados
+  PRIVATE             // Solo partes involucradas
+  HIDDEN              // Oculto por moderación
+}
+
+enum ReportReason {
+  INAPPROPRIATE_CONTENT
+  FAKE_REVIEW
+  SPAM
+  HARASSMENT
+  MISLEADING_INFO
+  CONFLICT_OF_INTEREST
+  DUPLICATE_REVIEW
+  OFF_TOPIC
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  INVESTIGATING
+  RESOLVED
+  DISMISSED
+  ESCALATED
+}
+
+
+// ========================================
+// PAYMENT SYSTEM MODELS
+// ========================================
+
+model EscrowTransaction {
+  id                     String   @id @default(cuid())
+  payerId               String
+  payeeId               String
+  contractId            String?
+  amount                Float
+  currency              String   @default("USD")
+  platformFee           Float    @default(0)
+  paymentProcessingFee  Float    @default(0)
+  status                String   // PENDING, ESCROWED, COMPLETED, DISPUTED, REFUNDED, FAILED
+  escrowCompletedAt     DateTime?
+  autoReleaseDate       DateTime?
+  releasedAmount        Float?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  payer    User      @relation("EscrowPayer", fields: [payerId], references: [id])
+  payee    User      @relation("EscrowPayee", fields: [payeeId], references: [id])
+  contract Contract? @relation(fields: [contractId], references: [id])
+  disputes Dispute[]
+  invoices Invoice[]
+
+  @@map("escrow_transactions")
+}
+
+model Wallet {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  balance      Float    @default(0)
+  frozenAmount Float    @default(0)
+  currency     String   @default("USD")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id                    String   @id @default(cuid())
+  walletId             String
+  type                 String   // DEPOSIT, WITHDRAWAL, TRANSFER_IN, TRANSFER_OUT, PAYMENT, RECEIVED
+  amount               Float
+  fee                  Float    @default(0)
+  currency             String   @default("USD")
+  description          String
+  status               String   // PENDING, COMPLETED, FAILED, PROCESSING
+  externalTransactionId String?
+  relatedUserId        String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  wallet      Wallet @relation(fields: [walletId], references: [id])
+  relatedUser User?  @relation("WalletTransactionRelated", fields: [relatedUserId], references: [id])
+
+  @@map("wallet_transactions")
+}
+
+model Invoice {
+  id                    String   @id @default(cuid())
+  number                String   @unique
+  status                String   // DRAFT, PENDING, PAID, OVERDUE, CANCELLED
+  amount                Float
+  currency              String   @default("USD")
+  subtotal              Float?
+  taxAmount             Float?
+  description           String
+  items                 String?  // JSON string of invoice items
+  dueDate               DateTime
+  paidDate              DateTime?
+  sentAt                DateTime?
+  notes                 String?
+  issuedById            String
+  issuedToId            String?
+  escrowTransactionId   String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  issuedBy          User              @relation("InvoiceIssuer", fields: [issuedById], references: [id])
+  issuedTo          User?             @relation("InvoiceRecipient", fields: [issuedToId], references: [id])
+  escrowTransaction EscrowTransaction? @relation(fields: [escrowTransactionId], references: [id])
+
+  @@map("invoices")
+}
+
+model Dispute {
+  id                 String   @id @default(cuid())
+  caseNumber         String   @unique
+  status             String   // OPEN, UNDER_REVIEW, RESOLVED, CLOSED
+  type               String   // REFUND_REQUEST, QUALITY_ISSUE, PAYMENT_ISSUE, CONTRACT_BREACH, OTHER
+  priority           String   // LOW, MEDIUM, HIGH
+  amount             Float
+  currency           String   @default("USD")
+  reason             String
+  createdBy          String
+  respondent         String
+  escrowTransactionId String
+  expectedResolution DateTime
+  resolvedAt         DateTime?
+  resolution         String?  // JSON string with resolution details
+  assignedAgent      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  creator           User              @relation("DisputeCreator", fields: [createdBy], references: [id])
+  respondentUser    User              @relation("DisputeRespondent", fields: [respondent], references: [id])
+  escrowTransaction EscrowTransaction @relation(fields: [escrowTransactionId], references: [id])
+  messages          DisputeMessage[]
+  evidence          DisputeEvidence[]
+
+  @@map("disputes")
+}
+
+model DisputeMessage {
+  id          String   @id @default(cuid())
+  disputeId   String
+  senderId    String
+  content     String
+  isFromAdmin Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  sender  User    @relation("DisputeMessageSender", fields: [senderId], references: [id])
+
+  @@map("dispute_messages")
+}
+
+model DisputeEvidence {
+  id         String   @id @default(cuid())
+  disputeId  String
+  type       String   // document, image, video, audio, email
+  filename   String
+  url        String
+  size       Int?
+  mimeType   String?
+  uploadedBy String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  dispute  Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  uploader User    @relation("DisputeEvidenceUploader", fields: [uploadedBy], references: [id])
+
+  @@map("dispute_evidence")
+}
+
+// Account para NextAuth
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// Session para NextAuth
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// VerificationToken para NextAuth
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ========================================
+// CHATBOT SAP MODELS - FLUJO 10
+// ========================================
+
+model ChatSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation("ChatSessions", fields: [userId], references: [id], onDelete: Cascade)
+  sessionName  String
+  language     String   @default("es")
+  isActive     Boolean  @default(true)
+  lastActivity DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  messages     ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id         String      @id @default(cuid())
+  sessionId  String
+  session    ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  content    String
+  role       ChatRole    @default(USER)
+  confidence Float?
+  sapContext Json?       // Contexto SAP específico
+  feedback   String?     // Feedback del usuario
+  isEscalated Boolean   @default(false)
+  escalatedAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@map("chat_messages")
+}
+
+model SAPKnowledge {
+  id             String          @id @default(cuid())
+  title          String
+  content        String
+  category       SAPCategory
+  tags           String[]        @default([])
+  sapModules     String[]        @default([])
+  difficulty     DifficultyLevel @default(BEGINNER)
+  userType       UserType        // Para qué tipo de usuario aplica
+  isActive       Boolean         @default(true)
+  viewCount      Int             @default(0)
+  helpfulVotes   Int             @default(0)
+  unhelpfulVotes Int             @default(0)
+  lastUpdated    DateTime        @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("sap_knowledge")
+}
+
+model ChatAnalytics {
+  id               String   @id @default(cuid())
+  userId           String?
+  sessionId        String?
+  queryType        String   // PROJECT_SCOPING, TECHNICAL_CONSULTATION, GENERAL_SUPPORT
+  queryCategory    String   // Budget, Timeline, Modules, etc.
+  resolution       String   // RESOLVED, ESCALATED, ABANDONED
+  responseTime     Float?   // Tiempo de respuesta en segundos
+  userSatisfaction Int?     // Rating 1-5
+  date             DateTime @default(now())
+
+  @@map("chat_analytics")
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum SAPCategory {
+  MODULES                 // Información sobre módulos SAP
+  IMPLEMENTATION          // Guías de implementación
+  MIGRATION              // Migración y upgrades
+  BEST_PRACTICES         // Mejores prácticas
+  TROUBLESHOOTING        // Solución de problemas
+  CERTIFICATION          // Información sobre certificaciones
+  METHODOLOGY            // ASAP, SAP Activate, etc.
+  PRICING                // Información de costos y precios
+  ARCHITECTURE           // Arquitectura técnica
+  INTEGRATION            // Integraciones
+  PLATFORM_HELP          // Ayuda de la plataforma
+}
+
+enum DifficultyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
