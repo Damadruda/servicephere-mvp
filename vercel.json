@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pwd && ls -la && ls -la app && npx prisma generate --schema=./app/prisma/schema.prisma && cd app && npx next build",
+  "buildCommand": "npx prisma generate --schema=./prisma/schema.prisma && cd app && npx next build",
   "outputDirectory": "app/.next",
-  "installCommand": "cd app && npm install"
+  "installCommand": "npm install"
 }
