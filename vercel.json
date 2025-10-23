@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx prisma generate --schema=./prisma/schema.prisma && cd app && npx --yes next@14.2.28 build",
-  "outputDirectory": "app/.next",
+  "buildCommand": "npx prisma generate --schema=./prisma/schema.prisma && npx next build --experimental-app",
+  "outputDirectory": ".next",
   "installCommand": "npm install"
 }
