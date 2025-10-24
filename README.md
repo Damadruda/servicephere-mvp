@@ -3,4 +3,4 @@
 SAP Services Marketplace Platform
 
 # Clean deployment
-## Deployment with Other framework
+## Deployment with Next.js framework
