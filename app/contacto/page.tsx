@@ -5,7 +5,6 @@ import { Footer } from "@/components/layout/footer"
 export default function ContactoPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold text-primary mb-6">Contacto</h1>
@@ -77,7 +76,6 @@ export default function ContactoPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   )
 }
