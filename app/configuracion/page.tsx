@@ -12,7 +12,7 @@ import { Header } from '@/components/layout/header'
 import { Bell, Shield, User, Globe } from 'lucide-react'
 
 export const metadata = {
-  title: 'Configuración - SAP Marketplace',
+  title: 'Configuración - Servicephere',
   description: 'Configuración de cuenta y preferencias'
 }
 
@@ -25,7 +25,6 @@ export default async function ConfiguracionPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       
       <main className="container mx-auto max-w-4xl px-4 py-8">
         <div className="mb-8">
