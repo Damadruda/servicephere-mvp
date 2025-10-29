@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 export default function ProyectoDetailPage({ params }: { params: { id: string } }) {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
@@ -126,7 +125,6 @@ export default function ProyectoDetailPage({ params }: { params: { id: string } 
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   )
 }
