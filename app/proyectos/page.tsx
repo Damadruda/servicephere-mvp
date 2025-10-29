@@ -1,8 +1,6 @@
 
 import { Suspense } from 'react'
 import { ProjectsExplorer } from '@/components/projects/projects-explorer'
-import { Header } from '@/components/layout/header'
-import { Footer } from '@/components/layout/footer'
 import { SAPChatBot } from '@/components/sap-chatbot'
 
 export const metadata = {
@@ -13,7 +11,6 @@ export const metadata = {
 export default function ProjectsPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto max-w-7xl px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Proyectos SAP Disponibles</h1>
@@ -26,7 +23,6 @@ export default function ProjectsPage() {
           <ProjectsExplorer />
         </Suspense>
       </main>
-      <Footer />
       <SAPChatBot />
     </div>
   )
