@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 export default function ProveedorDetailPage({ params }: { params: { id: string } }) {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-3 gap-8">
@@ -126,7 +125,6 @@ export default function ProveedorDetailPage({ params }: { params: { id: string }
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   )
 }
