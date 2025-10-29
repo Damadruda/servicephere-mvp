@@ -41,7 +41,6 @@ export default function OportunidadesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Header />
       
       <main className="container mx-auto px-4 py-8">
         {/* Header Section */}
@@ -55,8 +54,8 @@ export default function OportunidadesPage() {
             Oportunidades de Negocio
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Descubre proyectos SAP que coinciden con tu experiencia y especialización. 
-            Recibe un matching score basado en tu perfil profesional.
+            Descubre proyectos SAP que coinciden con la experiencia y especialización de tu empresa. 
+            Recibe un matching score basado en tu perfil de partner SAP.
           </p>
         </div>
 
@@ -69,7 +68,7 @@ export default function OportunidadesPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground text-center">
-                Los proyectos se ordenan por compatibilidad con tu perfil y experiencia SAP
+                Los proyectos se ordenan por compatibilidad con el perfil y experiencia en SAP de la empresa
               </p>
             </CardContent>
           </Card>
@@ -103,7 +102,6 @@ export default function OportunidadesPage() {
         <ProjectOpportunities />
       </main>
       
-      <Footer />
     </div>
   )
 }
