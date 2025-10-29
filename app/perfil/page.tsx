@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 export default function PerfilPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold text-primary mb-6">Mi Perfil</h1>
@@ -91,7 +90,6 @@ export default function PerfilPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   )
 }
