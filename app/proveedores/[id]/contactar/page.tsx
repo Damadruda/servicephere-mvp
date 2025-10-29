@@ -14,7 +14,6 @@ export default function ContactarProveedorPage({ params }: { params: { id: strin
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold text-primary mb-6">Contactar Proveedor</h1>
@@ -83,7 +82,6 @@ export default function ContactarProveedorPage({ params }: { params: { id: strin
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   )
 }
