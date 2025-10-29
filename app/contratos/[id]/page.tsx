@@ -144,7 +144,6 @@ export default function ContractPage({ params }: ContractPageProps) {
         />
       </main>
       
-      <Footer />
     </div>
   )
 }
