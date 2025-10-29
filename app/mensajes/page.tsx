@@ -29,7 +29,6 @@ export default function MensajesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-4xl font-bold text-primary mb-6">Mensajes</h1>
@@ -121,7 +120,6 @@ export default function MensajesPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   )
 }
