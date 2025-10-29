@@ -62,7 +62,7 @@ export default function PerfilPage() {
                 <CardContent>
                   <Badge className="mb-2">Cliente</Badge>
                   <p className="text-sm text-muted-foreground">
-                    Empresa que busca servicios SAP
+                    Empresa que busca empresas de servicios SAP
                   </p>
                 </CardContent>
               </Card>
