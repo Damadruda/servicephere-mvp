@@ -4,8 +4,8 @@ import { ProjectsExplorer } from '@/components/projects/projects-explorer'
 import { SAPChatBot } from '@/components/sap-chatbot'
 
 export const metadata = {
-  title: 'Explorar Proyectos SAP - SAP Marketplace',
-  description: 'Descubre oportunidades de proyectos SAP disponibles para consultores'
+  title: 'Explorar Proyectos SAP',
+  description: 'Descubre oportunidades de proyectos SAP disponibles'
 }
 
 export default function ProjectsPage() {
