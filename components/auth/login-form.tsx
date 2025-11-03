@@ -19,15 +19,7 @@ export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard'
-const isRegistered = searchParams?.get('registered') === 'true'
-
-// Mostrar mensaje si el usuario viene del registro
-useEffect(() => {
-  if (isRegistered) {
-    toast.success('¡Registro exitoso! Ahora inicia sesión con tus credenciales')
-  }
-}, [isRegistered])
-const isRegistered = searchParams?.get('registered') === 'true'
+  const isRegistered = searchParams?.get('registered') === 'true'
 
 // Mostrar mensaje si el usuario viene del registro
 useEffect(() => {
