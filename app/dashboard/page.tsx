@@ -1,5 +1,6 @@
 
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { ClientDashboard } from '@/components/dashboard/client-dashboard'
 import { ProviderDashboard } from '@/components/dashboard/provider-dashboard'
@@ -10,8 +11,7 @@ export const metadata = {
 }
 
 export default async function DashboardPage() {
-  import { authOptions } from '@/lib/auth'
-const session = await getServerSession(authOptions)
+const session = await getServerSession(authOptions) //
   
   if (!session) {
     redirect('/login')
