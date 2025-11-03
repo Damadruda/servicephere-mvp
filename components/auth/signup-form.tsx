@@ -82,18 +82,14 @@ export function SignupForm() {
       const data = await response.json()
 
       if (response.ok) {
-        toast.success('¡Cuenta creada exitosamente!')
-        
-        // Redirigir según el tipo de usuario al onboarding correspondiente
-        if (userType === 'PROVIDER') {
-          router.push('/onboarding/proveedor')
-        } else {
-          // Si es cliente, redirigir al onboarding de cliente con assessment SAP
-          router.push('/onboarding/cliente')
-        }
-      } else {
-        toast.error(data.error || 'Error al crear la cuenta')
-      }
+  toast.success('¡Cuenta creada exitosamente! Redirigiendo al login...')
+
+  // Esperar 1.5 segundos para que el usuario vea el mensaje
+  setTimeout(() => {
+    // Redirigir al login con un mensaje de éxito
+    router.push('/login?registered=true')
+  }, 1500)
+}
     } catch (error) {
       console.error('Signup error:', error)
       toast.error('Error al crear la cuenta')
