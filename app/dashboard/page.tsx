@@ -10,7 +10,8 @@ export const metadata = {
 }
 
 export default async function DashboardPage() {
-  const session = await getServerSession()
+  import { authOptions } from '@/lib/auth'
+const session = await getServerSession(authOptions)
   
   if (!session) {
     redirect('/login')
