@@ -9,6 +9,12 @@ import { prisma } from './prisma'
 // Sistema de autenticación completo con NextAuth.js
 // Usa JWT para sesiones y bcrypt para contraseñas
 
+// Validar que las variables de entorno críticas estén presentes
+if (!process.env.NEXTAUTH_SECRET) {
+  console.error('❌ [AUTH CONFIG] NEXTAUTH_SECRET no está configurado')
+  throw new Error('NEXTAUTH_SECRET must be set in environment variables')
+}
+
 export const authOptions: NextAuthOptions = {
   // Configuración de debugging (solo en desarrollo)
   debug: process.env.NODE_ENV === 'development',
@@ -148,6 +154,12 @@ export const authOptions: NextAuthOptions = {
   
   // Secret (CRÍTICO para producción)
   secret: process.env.NEXTAUTH_SECRET,
+  
+  // Base path para las rutas de autenticación
+  basePath: '/api/auth',
+  
+  // Configuración de URLs (importante para Vercel)
+  useSecureCookies: process.env.NODE_ENV === 'production',
   
   // Configuración de cookies
   cookies: {

@@ -1,4 +1,5 @@
 import NextAuth from 'next-auth'
+import type { NextRequest } from 'next/server'
 import { authOptions } from '@/lib/auth'
 
 // ============================================
@@ -8,10 +9,14 @@ import { authOptions } from '@/lib/auth'
 // - GET /api/auth/* (sesión, csrf, providers, etc.)
 // - POST /api/auth/* (signin, signout, callback)
 
+// Crear el handler de NextAuth
 const handler = NextAuth(authOptions)
 
-// Exportar el handler para ambos métodos HTTP
-export { handler as GET, handler as POST }
+// Exportar explícitamente los métodos HTTP
+// Next.js App Router requiere exportaciones nombradas para GET y POST
+export const GET = handler
+export const POST = handler
 
 // Configuración de runtime para Vercel
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
