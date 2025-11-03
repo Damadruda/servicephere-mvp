@@ -155,9 +155,7 @@ export const authOptions: NextAuthOptions = {
   // Secret (CRÍTICO para producción)
   secret: process.env.NEXTAUTH_SECRET,
   
-  // Base path para las rutas de autenticación
-  basePath: '/api/auth',
-  
+
   // Configuración de URLs (importante para Vercel)
   useSecureCookies: process.env.NODE_ENV === 'production',
   
