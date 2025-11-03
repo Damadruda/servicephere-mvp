@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -71,7 +72,7 @@ export function SignupForm() {
         companySize: formData.companySize || undefined
       }
 
-      console.log('Submitting data:', submitData) // Debug log
+      console.log('📝 [SIGNUP-FORM] Enviando datos de registro:', submitData)
 
       const response = await fetch('/api/signup', {
         method: 'POST',
@@ -81,18 +82,40 @@ export function SignupForm() {
 
       const data = await response.json()
 
-      if (response.ok) {
-  toast.success('¡Cuenta creada exitosamente! Redirigiendo al login...')
+      if (response.ok && data.success) {
+        console.log('✅ [SIGNUP-FORM] Registro exitoso, iniciando login automático...')
+        toast.success('¡Cuenta creada exitosamente! Iniciando sesión...')
 
-  // Esperar 1.5 segundos para que el usuario vea el mensaje
-  setTimeout(() => {
-    // Redirigir al login con un mensaje de éxito
-    router.push('/login?registered=true')
-  }, 1500)
-}
+        // Login automático usando las credenciales recién registradas
+        const signInResult = await signIn('credentials', {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+          callbackUrl: '/dashboard'
+        })
+
+        console.log('📋 [SIGNUP-FORM] Resultado de login automático:', signInResult)
+
+        if (signInResult?.ok) {
+          console.log('✅ [SIGNUP-FORM] Login automático exitoso, redirigiendo a dashboard...')
+          toast.success('¡Bienvenido a ServiceSphere!')
+          
+          // Redirigir al dashboard
+          router.push('/dashboard')
+          router.refresh()
+        } else {
+          console.error('❌ [SIGNUP-FORM] Error en login automático:', signInResult?.error)
+          // Si el login automático falla, redirigir al login manual
+          toast.info('Cuenta creada. Por favor inicia sesión.')
+          router.push('/login?registered=true')
+        }
+      } else {
+        console.error('❌ [SIGNUP-FORM] Error en registro:', data)
+        toast.error(data.error || 'Error al crear la cuenta')
+      }
     } catch (error) {
-      console.error('Signup error:', error)
-      toast.error('Error al crear la cuenta')
+      console.error('❌ [SIGNUP-FORM] Excepción en signup:', error)
+      toast.error('Error al crear la cuenta. Por favor intenta de nuevo.')
     } finally {
       setIsLoading(false)
     }

@@ -32,23 +32,35 @@ useEffect(() => {
     e.preventDefault()
     setIsLoading(true)
 
+    console.log('🔐 [LOGIN-FORM] Iniciando proceso de login...')
+
     try {
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false
+        redirect: false,
+        callbackUrl
       })
 
+      console.log('📋 [LOGIN-FORM] Resultado de signIn:', result)
+
       if (result?.error) {
-        toast.error('Credenciales inválidas')
-      } else {
+        console.error('❌ [LOGIN-FORM] Error en login:', result.error)
+        toast.error('Credenciales inválidas. Por favor verifica tu email y contraseña.')
+      } else if (result?.ok) {
+        console.log('✅ [LOGIN-FORM] Login exitoso, redirigiendo a:', callbackUrl)
         toast.success('¡Bienvenido de vuelta!')
+        
+        // Forzar redirección
         router.push(callbackUrl)
         router.refresh()
+      } else {
+        console.error('⚠️ [LOGIN-FORM] Resultado inesperado:', result)
+        toast.error('Error inesperado al iniciar sesión')
       }
     } catch (error) {
-      console.error('Login error:', error)
-      toast.error('Error al iniciar sesión')
+      console.error('❌ [LOGIN-FORM] Excepción en login:', error)
+      toast.error('Error al iniciar sesión. Por favor intenta de nuevo.')
     } finally {
       setIsLoading(false)
     }
@@ -93,16 +105,6 @@ useEffect(() => {
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </Button>
         </div>
-      </div>
-
-      <div className="bg-muted/30 p-3 rounded-lg text-sm">
-        <p className="font-medium text-muted-foreground mb-1">Cuentas Demo:</p>
-        <p className="text-xs text-muted-foreground mb-1">
-          <strong>Cliente:</strong> cliente@demo.com | cliente123
-        </p>
-        <p className="text-xs text-muted-foreground">
-          <strong>Proveedor:</strong> proveedor@demo.com | proveedor123
-        </p>
       </div>
 
       <Button type="submit" className="w-full" disabled={isLoading}>

@@ -117,11 +117,14 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // TODO: Enviar email de verificación aquí
+    // TODO: Enviar email de verificación aquí (implementar más tarde)
     // await sendVerificationEmail(user.email, verificationToken)
 
+    console.log('✅ [SIGNUP] Usuario creado exitosamente:', user.email)
+
     return NextResponse.json({
-      message: 'Usuario creado exitosamente. Por favor verifica tu email.',
+      success: true,
+      message: '¡Registro exitoso! Iniciando sesión...',
       user: {
         id: user.id,
         email: user.email,
