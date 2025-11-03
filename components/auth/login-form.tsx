@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,14 @@ export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard'
+const isRegistered = searchParams?.get('registered') === 'true'
+
+// Mostrar mensaje si el usuario viene del registro
+useEffect(() => {
+  if (isRegistered) {
+    toast.success('¡Registro exitoso! Ahora inicia sesión con tus credenciales')
+  }
+}, [isRegistered])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
