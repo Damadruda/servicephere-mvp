@@ -27,6 +27,14 @@ useEffect(() => {
     toast.success('¡Registro exitoso! Ahora inicia sesión con tus credenciales')
   }
 }, [isRegistered])
+const isRegistered = searchParams?.get('registered') === 'true'
+
+// Mostrar mensaje si el usuario viene del registro
+useEffect(() => {
+  if (isRegistered) {
+    toast.success('¡Registro exitoso! Ahora inicia sesión con tus credenciales')
+  }
+}, [isRegistered])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
