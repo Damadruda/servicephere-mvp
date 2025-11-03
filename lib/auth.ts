@@ -5,6 +5,37 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
 
+// ============================================
+// VALIDACIÓN DE VARIABLES DE ENTORNO CRÍTICAS
+// ============================================
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL
+
+// Validar que NEXTAUTH_SECRET esté configurado
+if (!NEXTAUTH_SECRET) {
+  console.error('❌ ERROR CRÍTICO: NEXTAUTH_SECRET no está configurado')
+  console.error('📝 Solución:')
+  console.error('   1. En desarrollo: Crea un archivo .env en la raíz del proyecto')
+  console.error('   2. En producción: Configura la variable en Vercel')
+  console.error('   3. Genera un secret con: openssl rand -base64 32')
+  console.error('   4. Consulta: configurar_vercel_paso_a_paso.md para instrucciones detalladas')
+  
+  // En desarrollo, usar un valor temporal (NUNCA en producción)
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('⚠️ Usando NEXTAUTH_SECRET temporal para desarrollo')
+    console.warn('⚠️ NO USES ESTO EN PRODUCCIÓN')
+  }
+}
+
+if (!NEXTAUTH_URL) {
+  console.error('❌ ERROR: NEXTAUTH_URL no está configurado')
+  console.error('📝 Debe ser: https://www.servicephere.com (en producción)')
+  console.error('📝 O: http://localhost:3000 (en desarrollo)')
+}
+
+// ============================================
+// CONFIGURACIÓN DE NEXTAUTH
+// ============================================
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -81,5 +112,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/login',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  // Usar el NEXTAUTH_SECRET validado
+  // En desarrollo, si no existe, NextAuth generará uno temporal con una advertencia
+  secret: NEXTAUTH_SECRET || (process.env.NODE_ENV === 'development' ? 'development-secret-please-change-in-production' : undefined),
 }

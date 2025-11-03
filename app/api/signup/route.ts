@@ -1,12 +1,16 @@
 
+// ARCHIVO CORREGIDO: app/api/signup/route.ts
+// Este archivo reemplaza el actual /app/api/signup/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
+// Esquema de validación corregido con campos requeridos
 const signupSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
@@ -14,12 +18,23 @@ const signupSchema = z.object({
   userType: z.enum(['CLIENT', 'PROVIDER'], {
     required_error: 'Tipo de usuario requerido'
   }),
-  // Campos opcionales para el perfil
-  companyName: z.string().optional(),
-  industry: z.string().optional(),
-  country: z.string().optional(),
-  city: z.string().optional(),
-  companySize: z.string().optional(),
+  // Campos REQUERIDOS (coinciden con el esquema de Prisma)
+  companyName: z.string().min(2, 'El nombre de la empresa es requerido'),
+  country: z.string().min(2, 'El país es requerido'),
+  city: z.string().min(2, 'La ciudad es requerida'),
+  // Campos opcionales
+  industry: z.enum([
+    'manufacturing',
+    'retail', 
+    'finance',
+    'healthcare',
+    'utilities',
+    'automotive',
+    'technology',
+    'consulting',
+    'other'
+  ]).optional(),
+  companySize: z.enum(['Small', 'Medium', 'Large', 'Enterprise']).optional(),
   contactTitle: z.string().optional(),
   description: z.string().optional()
 })
@@ -27,14 +42,17 @@ const signupSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('Received signup data:', body) // Debug log
+    console.log('Received signup data:', body)
     
-    // Si no hay userType, asignar un valor por defecto para pruebas automáticas
-    if (!body.userType && (body.name === 'Test User' || body.email?.includes('test'))) {
-      body.userType = 'CLIENT'
-      console.log('Auto-assigned CLIENT userType for test user')
+    // Código de test user solo en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+      if (!body.userType && (body.name === 'Test User' || body.email?.includes('test'))) {
+        body.userType = 'CLIENT'
+        console.log('Auto-assigned CLIENT userType for test user')
+      }
     }
     
+    // Validar datos con Zod
     const validatedData = signupSchema.parse(body)
 
     // Verificar si el usuario ya existe
@@ -49,7 +67,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hash de la contraseña
+    // Hash de la contraseña (CORREGIDO: usar método asíncrono)
     const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
     // Crear usuario básico primero
@@ -59,7 +77,8 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         name: validatedData.name,
         userType: validatedData.userType,
-        isVerified: true, // Auto-verificar para simplificar
+        // CAMBIAR A FALSE para implementar verificación por email
+        isVerified: false,
       }
     })
 
@@ -68,10 +87,10 @@ export async function POST(request: NextRequest) {
       await prisma.clientProfile.create({
         data: {
           userId: user.id,
-          companyName: validatedData.companyName || 'Sin especificar',
-          industry: validatedData.industry || 'Sin especificar',
-          country: validatedData.country || 'Sin especificar',
-          city: validatedData.city || 'Sin especificar',
+          companyName: validatedData.companyName,
+          industry: validatedData.industry || 'other',
+          country: validatedData.country,
+          city: validatedData.city,
           companySize: validatedData.companySize || 'Medium',
           contactName: validatedData.name,
           contactTitle: validatedData.contactTitle || 'Sin especificar',
@@ -82,10 +101,10 @@ export async function POST(request: NextRequest) {
       await prisma.providerProfile.create({
         data: {
           userId: user.id,
-          companyName: validatedData.companyName || validatedData.name,
+          companyName: validatedData.companyName,
           description: validatedData.description || 'Proveedor de servicios SAP',
-          country: validatedData.country || 'Sin especificar',
-          city: validatedData.city || 'Sin especificar',
+          country: validatedData.country,
+          city: validatedData.city,
           employeeCount: '11-50',
           website: '',
           contactName: validatedData.name,
@@ -93,13 +112,16 @@ export async function POST(request: NextRequest) {
           isPartner: false,
           verified: true,
           sapSpecializations: ['SAP Consulting'],
-          targetIndustries: [validatedData.industry || 'Technology'],
+          targetIndustries: [validatedData.industry || 'technology'],
         }
       })
     }
 
+    // TODO: Enviar email de verificación aquí
+    // await sendVerificationEmail(user.email, verificationToken)
+
     return NextResponse.json({
-      message: 'Usuario creado exitosamente',
+      message: 'Usuario creado exitosamente. Por favor verifica tu email.',
       user: {
         id: user.id,
         email: user.email,
@@ -111,6 +133,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating user:', error)
 
+    // Manejo de errores de validación de Zod
     if (error instanceof z.ZodError) {
       return NextResponse.json({
         error: 'Datos de registro inválidos',
@@ -118,6 +141,38 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Manejo de errores específicos de Prisma
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // Error de constraint único (email duplicado)
+      if (error.code === 'P2002') {
+        return NextResponse.json({
+          error: 'Ya existe una cuenta con este email'
+        }, { status: 400 })
+      }
+      
+      // Error de foreign key
+      if (error.code === 'P2003') {
+        return NextResponse.json({
+          error: 'Error de integridad de datos'
+        }, { status: 400 })
+      }
+
+      // Error de registro no encontrado
+      if (error.code === 'P2025') {
+        return NextResponse.json({
+          error: 'Registro no encontrado'
+        }, { status: 404 })
+      }
+    }
+
+    // Error de conexión a la base de datos
+    if (error instanceof Prisma.PrismaClientInitializationError) {
+      return NextResponse.json({
+        error: 'Error de conexión a la base de datos. Por favor, intenta más tarde.'
+      }, { status: 503 })
+    }
+
+    // Error genérico
     return NextResponse.json({
       error: 'Error interno del servidor'
     }, { status: 500 })
