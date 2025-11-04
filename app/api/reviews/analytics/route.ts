@@ -20,7 +20,6 @@ function getPrismaClient() {
   return prisma
 }
 
-export const dynamic = 'force-dynamic'
 
 const querySchema = z.object({
   period: z.enum(['7d', '30d', '90d', '1y', 'all']).optional().default('30d'),

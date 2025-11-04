@@ -20,7 +20,6 @@ function getPrismaClient() {
   return prisma
 }
 
-export const dynamic = 'force-dynamic'
 
 const querySchema = z.object({
   type: z.enum(['given', 'received', 'all']).optional().default('all'),

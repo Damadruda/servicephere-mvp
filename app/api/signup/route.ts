@@ -23,7 +23,6 @@ function getPrismaClient() {
   return prisma
 }
 
-export const dynamic = 'force-dynamic'
 
 // Esquema de validación corregido con campos requeridos
 const signupSchema = z.object({

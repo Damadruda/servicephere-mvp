@@ -18,7 +18,6 @@ function getPrismaClient() {
   return prisma
 }
 
-export const dynamic = 'force-dynamic'
 
 const querySchema = z.object({
   page: z.string().transform(Number).pipe(z.number().min(1)).optional().default('1'),

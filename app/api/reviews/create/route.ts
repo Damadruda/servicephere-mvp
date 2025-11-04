@@ -20,7 +20,6 @@ function getPrismaClient() {
   return prisma
 }
 
-export const dynamic = 'force-dynamic'
 
 const createReviewSchema = z.object({
   projectId: z.string().cuid(),

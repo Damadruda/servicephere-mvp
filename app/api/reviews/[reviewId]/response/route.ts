@@ -20,7 +20,6 @@ function getPrismaClient() {
   return prisma
 }
 
-export const dynamic = 'force-dynamic'
 
 const responseSchema = z.object({
   response: z.string().min(10).max(1000)
