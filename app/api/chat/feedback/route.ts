@@ -4,7 +4,21 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +30,7 @@ export async function POST(request: NextRequest) {
     const { messageId, feedback } = await request.json()
 
     // Verificar que el mensaje existe y pertenece a una sesión del usuario
-    const message = await prisma.chatMessage.findFirst({
+    const message = await getPrismaClient().chatMessage.findFirst({
       where: {
         id: messageId,
         session: {
@@ -30,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Actualizar el mensaje con el feedback
-    await prisma.chatMessage.update({
+    await getPrismaClient().chatMessage.update({
       where: { id: messageId },
       data: { feedback }
     })
@@ -38,7 +52,7 @@ export async function POST(request: NextRequest) {
     // Registrar feedback en analytics si es rating numérico
     const rating = parseInt(feedback)
     if (!isNaN(rating) && rating >= 1 && rating <= 5) {
-      await prisma.chatAnalytics.create({
+      await getPrismaClient().chatAnalytics.create({
         data: {
           userId: session.user.id,
           sessionId: message.sessionId,

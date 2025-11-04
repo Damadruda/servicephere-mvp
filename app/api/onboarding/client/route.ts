@@ -2,7 +2,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +33,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // Update client profile with onboarding data
-    await prisma.clientProfile.update({
+    await getPrismaClient().clientProfile.update({
       where: { userId: session.user.id },
       data: {
         // Store onboarding data as JSON in description field or create new fields
@@ -31,7 +46,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Mark user as verified after completing onboarding
-    await prisma.user.update({
+    await getPrismaClient().user.update({
       where: { id: session.user.id },
       data: { isVerified: true }
     })

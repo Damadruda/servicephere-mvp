@@ -2,8 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 const createQuotationSchema = z.object({
   projectId: z.string(),
@@ -79,7 +94,7 @@ export async function POST(request: NextRequest) {
     const validatedData = createQuotationSchema.parse(body)
 
     // Check if project exists and is published
-    const project = await prisma.project.findUnique({
+    const project = await getPrismaClient().project.findUnique({
       where: { id: validatedData.projectId },
       select: { id: true, status: true }
     })
@@ -92,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if provider already has a quotation for this project
-    const existingQuotation = await prisma.quotation.findUnique({
+    const existingQuotation = await getPrismaClient().quotation.findUnique({
       where: {
         projectId_providerId: {
           projectId: validatedData.projectId,
@@ -109,7 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the quotation
-    const quotation = await prisma.quotation.create({
+    const quotation = await getPrismaClient().quotation.create({
       data: {
         projectId: validatedData.projectId,
         providerId: session.user.id,

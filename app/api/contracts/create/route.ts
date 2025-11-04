@@ -2,7 +2,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { quotationId, dueDiligenceData } = await request.json()
 
     // Get quotation details
-    const quotation = await prisma.quotation.findUnique({
+    const quotation = await getPrismaClient().quotation.findUnique({
       where: { id: quotationId },
       include: {
         project: {
@@ -40,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create due diligence record
-    const dueDiligence = await prisma.dueDiligence.create({
+    const dueDiligence = await getPrismaClient().dueDiligence.create({
       data: {
         quotationId: quotation.id,
         providerId: quotation.providerId,
@@ -66,7 +81,7 @@ export async function POST(request: NextRequest) {
     const contractNumber = `SAP-${Date.now()}-${quotation.project.id.substring(0, 8).toUpperCase()}`
 
     // Create contract
-    const contract = await prisma.contract.create({
+    const contract = await getPrismaClient().contract.create({
       data: {
         quotationId: quotation.id,
         clientId: session.user.id,
@@ -91,7 +106,7 @@ export async function POST(request: NextRequest) {
     if (dueDiligenceData.paymentSchedule && Array.isArray(dueDiligenceData.paymentSchedule)) {
       await Promise.all(
         dueDiligenceData.paymentSchedule.map((payment: any) =>
-          prisma.payment.create({
+          getPrismaClient().payment.create({
             data: {
               contractId: contract.id,
               amount: payment.amount,
@@ -106,7 +121,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update quotation status
-    await prisma.quotation.update({
+    await getPrismaClient().quotation.update({
       where: { id: quotation.id },
       data: { 
         status: 'ACCEPTED',

@@ -2,8 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +42,7 @@ export async function POST(
     const { response } = responseSchema.parse(body)
 
     // Verificar que el review existe y el usuario es el target
-    const review = await prisma.review.findUnique({
+    const review = await getPrismaClient().review.findUnique({
       where: { id: reviewId },
       include: {
         reviewer: { select: { name: true } },
@@ -52,7 +67,7 @@ export async function POST(
     }
 
     // Actualizar el review con la respuesta
-    const updatedReview = await prisma.review.update({
+    const updatedReview = await getPrismaClient().review.update({
       where: { id: reviewId },
       data: {
         response,

@@ -4,7 +4,21 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export async function GET() {
   try {
@@ -13,7 +27,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const chatSessions = await prisma.chatSession.findMany({
+    const chatSessions = await getPrismaClient().chatSession.findMany({
       where: {
         userId: session.user.id
       },
@@ -48,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     const { sessionName, language } = await request.json()
 
-    const chatSession = await prisma.chatSession.create({
+    const chatSession = await getPrismaClient().chatSession.create({
       data: {
         userId: session.user.id,
         sessionName: sessionName || `Consulta SAP - ${new Date().toLocaleDateString()}`,

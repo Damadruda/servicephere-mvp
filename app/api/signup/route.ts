@@ -4,9 +4,24 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +73,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ [SIGNUP-API] Validation successful')
 
     // Verificar si el usuario ya existe
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await getPrismaClient().user.findUnique({
       where: { email: validatedData.email }
     })
 
@@ -73,7 +88,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
     // Crear usuario básico primero
-    const user = await prisma.user.create({
+    const user = await getPrismaClient().user.create({
       data: {
         email: validatedData.email,
         password: hashedPassword,
@@ -86,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     // Crear perfil según el tipo de usuario
     if (validatedData.userType === 'CLIENT') {
-      await prisma.clientProfile.create({
+      await getPrismaClient().clientProfile.create({
         data: {
           userId: user.id,
           companyName: validatedData.companyName,
@@ -100,7 +115,7 @@ export async function POST(request: NextRequest) {
         }
       })
     } else {
-      await prisma.providerProfile.create({
+      await getPrismaClient().providerProfile.create({
         data: {
           userId: user.id,
           companyName: validatedData.companyName,

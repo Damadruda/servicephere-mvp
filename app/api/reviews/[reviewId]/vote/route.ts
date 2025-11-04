@@ -2,8 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +42,7 @@ export async function POST(
     const { isHelpful } = voteSchema.parse(body)
 
     // Verificar que el review existe
-    const review = await prisma.review.findUnique({
+    const review = await getPrismaClient().review.findUnique({
       where: { id: reviewId },
       select: { id: true, reviewerId: true, targetId: true }
     })
@@ -44,7 +59,7 @@ export async function POST(
     }
 
     // Crear o actualizar el voto
-    const existingVote = await prisma.reviewVote.findUnique({
+    const existingVote = await getPrismaClient().reviewVote.findUnique({
       where: {
         reviewId_userId: {
           reviewId,
@@ -56,13 +71,13 @@ export async function POST(
     let vote
     if (existingVote) {
       // Actualizar voto existente
-      vote = await prisma.reviewVote.update({
+      vote = await getPrismaClient().reviewVote.update({
         where: { id: existingVote.id },
         data: { isHelpful }
       })
     } else {
       // Crear nuevo voto
-      vote = await prisma.reviewVote.create({
+      vote = await getPrismaClient().reviewVote.create({
         data: {
           reviewId,
           userId: session.user.id,
@@ -73,15 +88,15 @@ export async function POST(
 
     // Actualizar contadores en el review
     const [helpfulCount, unhelpfulCount] = await Promise.all([
-      prisma.reviewVote.count({
+      getPrismaClient().reviewVote.count({
         where: { reviewId, isHelpful: true }
       }),
-      prisma.reviewVote.count({
+      getPrismaClient().reviewVote.count({
         where: { reviewId, isHelpful: false }
       })
     ])
 
-    await prisma.review.update({
+    await getPrismaClient().review.update({
       where: { id: reviewId },
       data: {
         helpfulVotes: helpfulCount,

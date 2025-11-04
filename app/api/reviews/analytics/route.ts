@@ -2,8 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -66,16 +81,16 @@ export async function GET(request: NextRequest) {
       recentTrends
     ] = await Promise.all([
       // Total de reviews
-      prisma.review.count({ where: baseWhere }),
+      getPrismaClient().review.count({ where: baseWhere }),
       
       // Rating promedio
-      prisma.review.aggregate({
+      getPrismaClient().review.aggregate({
         where: baseWhere,
         _avg: { overallRating: true }
       }),
       
       // Distribución de ratings
-      prisma.review.groupBy({
+      getPrismaClient().review.groupBy({
         by: ['overallRating'],
         where: baseWhere,
         _count: true,
@@ -83,14 +98,14 @@ export async function GET(request: NextRequest) {
       }),
       
       // Reviews por tipo
-      prisma.review.groupBy({
+      getPrismaClient().review.groupBy({
         by: ['reviewType'],
         where: baseWhere,
         _count: true
       }),
       
       // Usuarios mejor calificados
-      prisma.userRating.findMany({
+      getPrismaClient().userRating.findMany({
         where: {
           ...(userType !== 'ALL' && { user: { userType } }),
           totalReviewsReceived: { gt: 0 }
@@ -117,7 +132,7 @@ export async function GET(request: NextRequest) {
       }),
       
       // Tendencias recientes (últimos 30 días por semana)
-      prisma.$queryRaw`
+      getPrismaClient().$queryRaw`
         SELECT 
           DATE_TRUNC('week', "createdAt") as week,
           COUNT(*)::integer as reviews,
@@ -142,7 +157,7 @@ export async function GET(request: NextRequest) {
     let moderationStats = null
     
     // Por ahora, mostrar stats de moderación a todos los usuarios autenticados
-    moderationStats = await prisma.review.groupBy({
+    moderationStats = await getPrismaClient().review.groupBy({
       by: ['status'],
       where: {
         ...(period !== 'all' && { createdAt: dateFilter })

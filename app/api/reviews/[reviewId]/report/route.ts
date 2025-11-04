@@ -2,8 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -38,7 +53,7 @@ export async function POST(
     const { reason, description } = reportSchema.parse(body)
 
     // Verificar que el review existe
-    const review = await prisma.review.findUnique({
+    const review = await getPrismaClient().review.findUnique({
       where: { id: reviewId },
       select: { id: true, reviewerId: true, targetId: true, reportCount: true }
     })
@@ -48,7 +63,7 @@ export async function POST(
     }
 
     // Verificar que el usuario no ha reportado ya este review
-    const existingReport = await prisma.reviewReport.findFirst({
+    const existingReport = await getPrismaClient().reviewReport.findFirst({
       where: {
         reviewId,
         reporterId: session.user.id
@@ -62,7 +77,7 @@ export async function POST(
     }
 
     // Crear el reporte
-    const report = await prisma.reviewReport.create({
+    const report = await getPrismaClient().reviewReport.create({
       data: {
         reviewId,
         reporterId: session.user.id,
@@ -75,7 +90,7 @@ export async function POST(
     const newReportCount = review.reportCount + 1
     const shouldFlag = newReportCount >= 3 // Flag automático después de 3 reportes
 
-    await prisma.review.update({
+    await getPrismaClient().review.update({
       where: { id: reviewId },
       data: {
         reportCount: newReportCount,

@@ -3,7 +3,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Solo administradores pueden ver analytics completos
-    const user = await prisma.user.findUnique({
+    const user = await getPrismaClient().user.findUnique({
       where: { id: session.user.id }
     })
 
@@ -66,7 +81,7 @@ async function getUserAnalytics(userId: string) {
 
   const [totalQueries, avgSatisfaction, sessionsCount, resolutionStats] = await Promise.all([
     // Total de consultas del usuario
-    prisma.chatAnalytics.count({
+    getPrismaClient().chatAnalytics.count({
       where: {
         userId,
         date: { gte: last30Days }
@@ -74,7 +89,7 @@ async function getUserAnalytics(userId: string) {
     }),
 
     // Satisfacción promedio
-    prisma.chatAnalytics.aggregate({
+    getPrismaClient().chatAnalytics.aggregate({
       where: {
         userId,
         userSatisfaction: { not: null },
@@ -85,7 +100,7 @@ async function getUserAnalytics(userId: string) {
     }),
 
     // Número de sesiones
-    prisma.chatSession.count({
+    getPrismaClient().chatSession.count({
       where: {
         userId,
         createdAt: { gte: last30Days }
@@ -93,7 +108,7 @@ async function getUserAnalytics(userId: string) {
     }),
 
     // Stats de resolución
-    prisma.chatAnalytics.groupBy({
+    getPrismaClient().chatAnalytics.groupBy({
       by: ['resolution'],
       where: {
         userId,
@@ -120,15 +135,15 @@ async function getOverviewAnalytics(period: string) {
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
   const [totalQueries, totalSessions, avgResponseTime, uniqueUsers] = await Promise.all([
-    prisma.chatAnalytics.count({
+    getPrismaClient().chatAnalytics.count({
       where: { date: { gte: startDate } }
     }),
 
-    prisma.chatSession.count({
+    getPrismaClient().chatSession.count({
       where: { createdAt: { gte: startDate } }
     }),
 
-    prisma.chatAnalytics.aggregate({
+    getPrismaClient().chatAnalytics.aggregate({
       where: { 
         responseTime: { not: null },
         date: { gte: startDate }
@@ -136,7 +151,7 @@ async function getOverviewAnalytics(period: string) {
       _avg: { responseTime: true }
     }),
 
-    prisma.chatAnalytics.findMany({
+    getPrismaClient().chatAnalytics.findMany({
       where: { 
         userId: { not: null },
         date: { gte: startDate }
@@ -160,21 +175,21 @@ async function getQueryAnalytics(period: string) {
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
   const [queryTypes, queryCategories, dailyQueries] = await Promise.all([
-    prisma.chatAnalytics.groupBy({
+    getPrismaClient().chatAnalytics.groupBy({
       by: ['queryType'],
       where: { date: { gte: startDate } },
       _count: true,
       orderBy: { _count: { queryType: 'desc' } }
     }),
 
-    prisma.chatAnalytics.groupBy({
+    getPrismaClient().chatAnalytics.groupBy({
       by: ['queryCategory'],
       where: { date: { gte: startDate } },
       _count: true,
       orderBy: { _count: { queryCategory: 'desc' } }
     }),
 
-    prisma.$queryRaw`
+    getPrismaClient().$queryRaw`
       SELECT DATE(date) as day, COUNT(*) as count
       FROM chat_analytics 
       WHERE date >= ${startDate}
@@ -195,7 +210,7 @@ async function getSatisfactionAnalytics(period: string) {
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
   const [avgSatisfaction, satisfactionDistribution] = await Promise.all([
-    prisma.chatAnalytics.aggregate({
+    getPrismaClient().chatAnalytics.aggregate({
       where: { 
         userSatisfaction: { not: null },
         date: { gte: startDate }
@@ -204,7 +219,7 @@ async function getSatisfactionAnalytics(period: string) {
       _count: { userSatisfaction: true }
     }),
 
-    prisma.chatAnalytics.groupBy({
+    getPrismaClient().chatAnalytics.groupBy({
       by: ['userSatisfaction'],
       where: { 
         userSatisfaction: { not: null },
@@ -230,13 +245,13 @@ async function getResolutionAnalytics(period: string) {
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
   const [resolutionStats, avgResponseTime] = await Promise.all([
-    prisma.chatAnalytics.groupBy({
+    getPrismaClient().chatAnalytics.groupBy({
       by: ['resolution'],
       where: { date: { gte: startDate } },
       _count: true
     }),
 
-    prisma.chatAnalytics.groupBy({
+    getPrismaClient().chatAnalytics.groupBy({
       by: ['resolution'],
       where: { 
         responseTime: { not: null },

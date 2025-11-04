@@ -2,8 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +54,7 @@ export async function POST(request: NextRequest) {
     const validatedData = createReviewSchema.parse(body)
 
     // Verificar que el proyecto existe y el usuario está involucrado
-    const project = await prisma.project.findUnique({
+    const project = await getPrismaClient().project.findUnique({
       where: { id: validatedData.projectId },
       include: {
         quotations: {
@@ -78,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar que no existe ya un review del mismo tipo para este proyecto
-    const existingReview = await prisma.review.findFirst({
+    const existingReview = await getPrismaClient().review.findFirst({
       where: {
         projectId: validatedData.projectId,
         reviewerId: session.user.id,
@@ -104,7 +119,7 @@ export async function POST(request: NextRequest) {
       : null
 
     // Crear el review
-    const review = await prisma.review.create({
+    const review = await getPrismaClient().review.create({
       data: {
         projectId: validatedData.projectId,
         reviewerId: session.user.id,
@@ -169,7 +184,7 @@ export async function POST(request: NextRequest) {
 async function updateUserRatings(userId: string) {
   try {
     // Obtener todas las reviews del usuario
-    const reviews = await prisma.review.findMany({
+    const reviews = await getPrismaClient().review.findMany({
       where: {
         targetId: userId,
         status: { in: ['VERIFIED', 'APPROVED'] },
@@ -221,7 +236,7 @@ async function updateUserRatings(userId: string) {
     const verifiedReviewsCount = reviews.filter(r => r.isVerified).length
 
     // Actualizar o crear UserRating
-    await prisma.userRating.upsert({
+    await getPrismaClient().userRating.upsert({
       where: { userId },
       update: {
         averageRating,

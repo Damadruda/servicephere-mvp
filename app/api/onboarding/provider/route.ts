@@ -2,7 +2,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +33,7 @@ export async function POST(request: NextRequest) {
     const data = await request.json()
     
     // Crear o actualizar el perfil del proveedor
-    const provider = await prisma.providerProfile.upsert({
+    const provider = await getPrismaClient().providerProfile.upsert({
       where: { userId: session.user.id },
       create: {
         userId: session.user.id,
@@ -61,12 +76,12 @@ export async function POST(request: NextRequest) {
     // Crear/actualizar certificaciones
     if (data.certifications && data.certifications.length > 0) {
       // Eliminar certificaciones existentes
-      await prisma.certification.deleteMany({
+      await getPrismaClient().certification.deleteMany({
         where: { providerId: provider.id }
       })
       
       // Crear nuevas certificaciones
-      await prisma.certification.createMany({
+      await getPrismaClient().certification.createMany({
         data: data.certifications.map((cert: any) => ({
           providerId: provider.id,
           module: cert.module,
@@ -81,12 +96,12 @@ export async function POST(request: NextRequest) {
     // Crear/actualizar portfolio
     if (data.portfolioProjects && data.portfolioProjects.length > 0) {
       // Eliminar proyectos existentes
-      await prisma.portfolioItem.deleteMany({
+      await getPrismaClient().portfolioItem.deleteMany({
         where: { providerId: provider.id }
       })
       
       // Crear nuevos proyectos
-      await prisma.portfolioItem.createMany({
+      await getPrismaClient().portfolioItem.createMany({
         data: data.portfolioProjects.map((project: any) => ({
           providerId: provider.id,
           title: project.title,
@@ -104,7 +119,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Actualizar el tipo de usuario si es necesario
-    await prisma.user.update({
+    await getPrismaClient().user.update({
       where: { id: session.user.id },
       data: { userType: 'PROVIDER' }
     })
@@ -138,7 +153,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const provider = await prisma.providerProfile.findUnique({
+    const provider = await getPrismaClient().providerProfile.findUnique({
       where: { userId: session.user.id },
       include: {
         certifications: true,

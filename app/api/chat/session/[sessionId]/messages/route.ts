@@ -4,7 +4,21 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 interface RouteParams {
   params: {
@@ -20,7 +34,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verificar que la sesión pertenece al usuario
-    const chatSession = await prisma.chatSession.findFirst({
+    const chatSession = await getPrismaClient().chatSession.findFirst({
       where: {
         id: params.sessionId,
         userId: session.user.id
@@ -31,7 +45,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Sesión no encontrada' }, { status: 404 })
     }
 
-    const messages = await prisma.chatMessage.findMany({
+    const messages = await getPrismaClient().chatMessage.findMany({
       where: {
         sessionId: params.sessionId
       },

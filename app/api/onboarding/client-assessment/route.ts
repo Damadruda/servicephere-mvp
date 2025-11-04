@@ -2,7 +2,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get client profile with assessment data
-    const clientProfile = await prisma.clientProfile.findUnique({
+    const clientProfile = await getPrismaClient().clientProfile.findUnique({
       where: { userId: session.user.id }
     })
 

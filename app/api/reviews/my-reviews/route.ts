@@ -2,8 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     // Obtener reviews
     const [reviews, totalCount] = await Promise.all([
-      prisma.review.findMany({
+      getPrismaClient().review.findMany({
         where,
         orderBy,
         skip,
@@ -119,18 +134,18 @@ export async function GET(request: NextRequest) {
         }
       }),
       
-      prisma.review.count({ where })
+      getPrismaClient().review.count({ where })
     ])
 
     // Obtener estadísticas del usuario
     const [givenStats, receivedStats] = await Promise.all([
-      prisma.review.groupBy({
+      getPrismaClient().review.groupBy({
         by: ['status'],
         where: { reviewerId: session.user.id },
         _count: true
       }),
       
-      prisma.review.groupBy({
+      getPrismaClient().review.groupBy({
         by: ['overallRating'],
         where: { 
           targetId: session.user.id,

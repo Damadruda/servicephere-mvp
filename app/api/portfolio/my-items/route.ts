@@ -1,7 +1,22 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     // First get the provider profile
-    const providerProfile = await prisma.providerProfile.findUnique({
+    const providerProfile = await getPrismaClient().providerProfile.findUnique({
       where: { userId: session.user.id }
     })
 
@@ -25,7 +40,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    const portfolioItems = await prisma.portfolioItem.findMany({
+    const portfolioItems = await getPrismaClient().portfolioItem.findMany({
       where: {
         providerId: providerProfile.id,
         isPublic: true

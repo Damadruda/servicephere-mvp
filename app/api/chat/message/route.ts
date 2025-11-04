@@ -2,7 +2,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +29,7 @@ export async function POST(request: NextRequest) {
     const { sessionId, content } = await request.json()
 
     // Verificar que la sesión pertenece al usuario
-    const chatSession = await prisma.chatSession.findFirst({
+    const chatSession = await getPrismaClient().chatSession.findFirst({
       where: {
         id: sessionId,
         userId: session.user.id
@@ -26,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Obtener información del usuario para contexto
-    const user = await prisma.user.findUnique({
+    const user = await getPrismaClient().user.findUnique({
       where: { id: session.user.id },
       include: {
         clientProfile: true,
@@ -40,7 +55,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Obtener mensajes anteriores para contexto
-    const previousMessages = await prisma.chatMessage.findMany({
+    const previousMessages = await getPrismaClient().chatMessage.findMany({
       where: { sessionId },
       orderBy: { createdAt: 'asc' },
       take: 10 // Últimos 10 mensajes para contexto
@@ -50,7 +65,7 @@ export async function POST(request: NextRequest) {
     const userContext = buildUserContext(user)
 
     // Crear mensaje del usuario
-    const userMessage = await prisma.chatMessage.create({
+    const userMessage = await getPrismaClient().chatMessage.create({
       data: {
         sessionId,
         content: content.trim(),
@@ -67,7 +82,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Crear mensaje del asistente
-    const assistantMessage = await prisma.chatMessage.create({
+    const assistantMessage = await getPrismaClient().chatMessage.create({
       data: {
         sessionId,
         content: assistantResponse.content,
@@ -78,13 +93,13 @@ export async function POST(request: NextRequest) {
     })
 
     // Actualizar actividad de la sesión
-    await prisma.chatSession.update({
+    await getPrismaClient().chatSession.update({
       where: { id: sessionId },
       data: { lastActivity: new Date() }
     })
 
     // Registrar analytics
-    await prisma.chatAnalytics.create({
+    await getPrismaClient().chatAnalytics.create({
       data: {
         userId: session.user.id,
         sessionId,
@@ -204,7 +219,7 @@ async function findRelevantKnowledge(query: string, userType: string) {
   // Búsqueda básica por palabras clave
   const searchTerms = extractKeywords(query)
   
-  const knowledge = await prisma.sAPKnowledge.findMany({
+  const knowledge = await getPrismaClient().sAPKnowledge.findMany({
     where: {
       AND: [
         { isActive: true },

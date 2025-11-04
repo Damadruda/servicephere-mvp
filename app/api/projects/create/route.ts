@@ -2,8 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+
+
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 const createProjectSchema = z.object({
   title: z.string().min(10, 'El título debe tener al menos 10 caracteres'),
@@ -49,7 +64,7 @@ export async function POST(request: NextRequest) {
     const validatedData = createProjectSchema.parse(body)
 
     // Create the project
-    const project = await prisma.project.create({
+    const project = await getPrismaClient().project.create({
       data: {
         clientId: session.user.id,
         title: validatedData.title,
