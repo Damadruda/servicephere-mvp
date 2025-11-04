@@ -32,6 +32,21 @@ export const authOptions: NextAuthOptions = {
   // Configuración de debugging (solo en desarrollo)
   debug: process.env.NODE_ENV === 'development',
   
+  // CRITICAL: Logger for production debugging
+  logger: {
+    error: (code, metadata) => {
+      console.error('[NEXTAUTH ERROR]', code, metadata)
+    },
+    warn: (code) => {
+      console.warn('[NEXTAUTH WARNING]', code)
+    },
+    debug: (code, metadata) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[NEXTAUTH DEBUG]', code, metadata)
+      }
+    },
+  },
+  
   providers: [
     CredentialsProvider({
       id: 'credentials',

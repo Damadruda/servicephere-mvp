@@ -9,8 +9,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true)
+    
+    // Log AuthProvider initialization in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔐 [AUTH PROVIDER] Mounted and ready')
+      console.log('🔐 [AUTH PROVIDER] basePath: /api/auth')
+    }
   }, [])
 
+  // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
     return null
   }
@@ -20,6 +27,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       basePath="/api/auth"
       refetchInterval={5 * 60} // Refetch session every 5 minutes
       refetchOnWindowFocus={true}
+      // CRITICAL: Handle fetch errors gracefully
+      refetchWhenOffline={false}
+      // Add error handling
+      onError={(error) => {
+        console.error('[AUTH PROVIDER ERROR]', error)
+        // Don't crash the app on auth errors
+      }}
     >
       {children}
     </SessionProvider>

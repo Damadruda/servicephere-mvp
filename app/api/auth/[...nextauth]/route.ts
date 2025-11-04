@@ -10,32 +10,49 @@
  * - POST /api/auth/callback/:provider - OAuth callback
  * - And other NextAuth.js endpoints
  * 
- * IMPORTANT: This file must be at app/api/auth/[...nextauth]/route.ts
- * The [...nextauth] folder name is critical for NextAuth to catch all routes
+ * CRITICAL: This file must be at app/api/auth/[...nextauth]/route.ts
+ * The [...nextauth] folder name is required for NextAuth to catch all auth routes
  * 
- * FIX: Using NextAuth handlers export pattern for Next.js 14 App Router
- * This pattern ensures proper route registration and avoids 404 errors
+ * REFACTORED: Now using standalone auth module for better reliability
+ * This pattern ensures proper route registration in Next.js 14.2+ and Vercel
  */
 
-import NextAuth from 'next-auth'
-import type { NextAuthOptions } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+// Log route file loading (module-level, runs once)
+console.log('🚀 [NEXTAUTH ROUTE] Loading NextAuth route handler...')
+console.log('🚀 [NEXTAUTH ROUTE] File: app/api/auth/[...nextauth]/route.ts')
+console.log('🚀 [NEXTAUTH ROUTE] Timestamp:', new Date().toISOString())
 
-// Log route initialization (only in development)
-if (process.env.NODE_ENV === 'development') {
-  console.log('🔧 [NEXTAUTH ROUTE] Initializing NextAuth handler at /api/auth/[...nextauth]')
-  console.log('🔧 [NEXTAUTH ROUTE] NEXTAUTH_URL:', process.env.NEXTAUTH_URL)
-  console.log('🔧 [NEXTAUTH ROUTE] NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? 'SET' : 'NOT SET')
-}
+// Import handlers from the centralized auth module
+import { handlers } from '@/auth'
 
-// Initialize NextAuth with options
-// CRITICAL: This must be done correctly for App Router
-const handler = NextAuth(authOptions as NextAuthOptions)
+// Log handlers import
+console.log('✅ [NEXTAUTH ROUTE] Handlers imported from @/auth module')
 
-// Export handlers using named exports with explicit aliasing
-// This pattern is more reliable for Next.js 14.2+ App Router
-export { handler as GET, handler as POST }
+// Extract GET and POST handlers
+const { GET, POST } = handlers
 
-// Runtime configuration
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+// Log handler extraction
+console.log('✅ [NEXTAUTH ROUTE] GET and POST handlers extracted')
+console.log('✅ [NEXTAUTH ROUTE] GET handler type:', typeof GET)
+console.log('✅ [NEXTAUTH ROUTE] POST handler type:', typeof POST)
+
+// Export the handlers
+// CRITICAL: These must be named exports matching HTTP methods
+export { GET, POST }
+
+// Log successful export
+console.log('✅ [NEXTAUTH ROUTE] Handlers exported successfully')
+
+// Route segment configuration
+// IMPORTANT: These tell Next.js how to handle this route
+export const runtime = 'nodejs'      // Use Node.js runtime (not Edge)
+export const dynamic = 'force-dynamic' // Always render dynamically (never static)
+export const revalidate = 0           // Never cache (always fresh)
+
+// Log configuration
+console.log('⚙️ [NEXTAUTH ROUTE] Route configuration:')
+console.log('   - runtime:', runtime)
+console.log('   - dynamic:', dynamic)
+console.log('   - revalidate:', revalidate)
+
+console.log('🎉 [NEXTAUTH ROUTE] Route initialization complete!')
