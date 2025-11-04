@@ -12,6 +12,8 @@
  * 
  * IMPORTANT: This file must be at app/api/auth/[...nextauth]/route.ts
  * The [...nextauth] folder name is critical for NextAuth to catch all routes
+ * 
+ * FIXED: Using direct export pattern to ensure proper route registration
  */
 
 import NextAuth from 'next-auth'
@@ -24,12 +26,13 @@ if (process.env.NODE_ENV === 'development') {
   console.log('🔧 [NEXTAUTH ROUTE] Dynamic:', 'force-dynamic')
 }
 
-// Initialize NextAuth with our configuration
+// Create the NextAuth handler
 const handler = NextAuth(authOptions)
 
 // Export the handler for both GET and POST requests
-// This is REQUIRED for Next.js 14 App Router
-export { handler as GET, handler as POST }
+// Using direct exports (recommended pattern for Next.js 14.2+)
+export const GET = handler
+export const POST = handler
 
 // Export runtime configuration to ensure route is dynamic
 // nodejs runtime is required for NextAuth database operations

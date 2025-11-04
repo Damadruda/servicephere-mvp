@@ -41,15 +41,15 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        console.log('🔐 [AUTH] Iniciando proceso de autorización...')
-        
-        // Validar que existen las credenciales
-        if (!credentials?.email || !credentials?.password) {
-          console.error('❌ [AUTH] Credenciales faltantes')
-          throw new Error('Email y contraseña son requeridos')
-        }
-
         try {
+          console.log('🔐 [AUTH] Iniciando proceso de autorización...')
+          
+          // Validar que existen las credenciales
+          if (!credentials?.email || !credentials?.password) {
+            console.error('❌ [AUTH] Credenciales faltantes')
+            throw new Error('Email y contraseña son requeridos')
+          }
+
           // Buscar usuario en la base de datos
           console.log('🔍 [AUTH] Buscando usuario:', credentials.email)
           const user = await prisma.user.findUnique({
