@@ -19,7 +19,6 @@ function getPrismaClient() {
   return prisma
 }
 
-export const dynamic = 'force-dynamic'
 
 export async function POST(
   request: NextRequest,
