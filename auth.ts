@@ -13,7 +13,6 @@
  */
 
 import NextAuth from 'next-auth'
-import type { NextAuthConfig } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
 // Log initialization (only in development)
