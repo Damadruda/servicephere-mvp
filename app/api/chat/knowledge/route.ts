@@ -4,7 +4,19 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+// Configuración para evitar generación estática durante el build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Lazy initialization de PrismaClient para evitar ejecución en build time
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,7 +51,7 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    const knowledge = await prisma.sAPKnowledge.findMany({
+    const knowledge = await getPrismaClient().sAPKnowledge.findMany({
       where,
       take: limit,
       orderBy: [
@@ -72,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Solo administradores pueden crear conocimiento
-    const user = await prisma.user.findUnique({
+    const user = await getPrismaClient().user.findUnique({
       where: { id: session.user.id }
     })
 
@@ -90,7 +102,7 @@ export async function POST(request: NextRequest) {
       userType 
     } = await request.json()
 
-    const knowledge = await prisma.sAPKnowledge.create({
+    const knowledge = await getPrismaClient().sAPKnowledge.create({
       data: {
         title,
         content,
@@ -126,7 +138,7 @@ export async function PUT(request: NextRequest) {
     const { knowledgeId, vote } = await request.json()
 
     if (vote === 'helpful') {
-      await prisma.sAPKnowledge.update({
+      await getPrismaClient().sAPKnowledge.update({
         where: { id: knowledgeId },
         data: { 
           helpfulVotes: { increment: 1 },
@@ -134,7 +146,7 @@ export async function PUT(request: NextRequest) {
         }
       })
     } else if (vote === 'unhelpful') {
-      await prisma.sAPKnowledge.update({
+      await getPrismaClient().sAPKnowledge.update({
         where: { id: knowledgeId },
         data: { 
           unhelpfulVotes: { increment: 1 },
@@ -143,7 +155,7 @@ export async function PUT(request: NextRequest) {
       })
     } else {
       // Solo incrementar view count
-      await prisma.sAPKnowledge.update({
+      await getPrismaClient().sAPKnowledge.update({
         where: { id: knowledgeId },
         data: { viewCount: { increment: 1 } }
       })
