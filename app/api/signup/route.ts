@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         name: validatedData.name,
         userType: validatedData.userType,
-        // CAMBIAR A FALSE para implementar verificación por email
-        isVerified: false,
+        // Set to TRUE by default until email verification is implemented
+        isVerified: true,
       }
     })
 
