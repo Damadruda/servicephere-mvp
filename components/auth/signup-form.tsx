@@ -86,6 +86,9 @@ export function SignupForm() {
         console.log('✅ [SIGNUP-FORM] Registro exitoso, iniciando login automático...')
         toast.success('¡Cuenta creada exitosamente! Iniciando sesión...')
 
+        // Pequeña espera para asegurar que la transacción de BD se haya completado
+        await new Promise(resolve => setTimeout(resolve, 500))
+
         // Login automático usando las credenciales recién registradas
         const signInResult = await signIn('credentials', {
           email: formData.email,
@@ -94,7 +97,12 @@ export function SignupForm() {
           callbackUrl: '/dashboard'
         })
 
-        console.log('📋 [SIGNUP-FORM] Resultado de login automático:', signInResult)
+        console.log('📋 [SIGNUP-FORM] Resultado de login automático:', {
+          ok: signInResult?.ok,
+          error: signInResult?.error,
+          status: signInResult?.status,
+          url: signInResult?.url
+        })
 
         if (signInResult?.ok) {
           console.log('✅ [SIGNUP-FORM] Login automático exitoso, redirigiendo a dashboard...')
@@ -104,7 +112,11 @@ export function SignupForm() {
           router.push('/dashboard')
           router.refresh()
         } else {
-          console.error('❌ [SIGNUP-FORM] Error en login automático:', signInResult?.error)
+          console.error('❌ [SIGNUP-FORM] Error en login automático:', {
+            error: signInResult?.error,
+            status: signInResult?.status,
+            details: 'El login automático falló después del registro exitoso'
+          })
           // Si el login automático falla, redirigir al login manual
           toast.info('Cuenta creada. Por favor inicia sesión.')
           router.push('/login?registered=true')
