@@ -42,18 +42,20 @@ const signupSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('Received signup data:', body)
+    console.log('📥 [SIGNUP-API] Received signup data:', JSON.stringify(body, null, 2))
     
     // Código de test user solo en desarrollo
     if (process.env.NODE_ENV === 'development') {
       if (!body.userType && (body.name === 'Test User' || body.email?.includes('test'))) {
         body.userType = 'CLIENT'
-        console.log('Auto-assigned CLIENT userType for test user')
+        console.log('🔧 [SIGNUP-API] Auto-assigned CLIENT userType for test user')
       }
     }
     
+    console.log('🔍 [SIGNUP-API] Validating data against schema...')
     // Validar datos con Zod
     const validatedData = signupSchema.parse(body)
+    console.log('✅ [SIGNUP-API] Validation successful')
 
     // Verificar si el usuario ya existe
     const existingUser = await prisma.user.findUnique({
@@ -134,20 +136,35 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Error creating user:', error)
+    console.error('❌ [SIGNUP-API] Error creating user:', error)
 
     // Manejo de errores de validación de Zod
     if (error instanceof z.ZodError) {
+      console.error('❌ [SIGNUP-API] Validation failed:', JSON.stringify(error.errors, null, 2))
+      
+      // Crear mensajes de error más legibles
+      const fieldErrors: Record<string, string> = {}
+      error.errors.forEach(err => {
+        const field = err.path.join('.')
+        fieldErrors[field] = err.message
+      })
+      
+      console.error('❌ [SIGNUP-API] Field errors:', fieldErrors)
+      
       return NextResponse.json({
         error: 'Datos de registro inválidos',
-        details: error.errors
+        details: error.errors,
+        fieldErrors: fieldErrors
       }, { status: 400 })
     }
 
     // Manejo de errores específicos de Prisma
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      console.error('❌ [SIGNUP-API] Prisma error code:', error.code)
+      
       // Error de constraint único (email duplicado)
       if (error.code === 'P2002') {
+        console.error('❌ [SIGNUP-API] Duplicate email detected')
         return NextResponse.json({
           error: 'Ya existe una cuenta con este email'
         }, { status: 400 })
@@ -155,6 +172,7 @@ export async function POST(request: NextRequest) {
       
       // Error de foreign key
       if (error.code === 'P2003') {
+        console.error('❌ [SIGNUP-API] Foreign key constraint failed')
         return NextResponse.json({
           error: 'Error de integridad de datos'
         }, { status: 400 })
@@ -162,6 +180,7 @@ export async function POST(request: NextRequest) {
 
       // Error de registro no encontrado
       if (error.code === 'P2025') {
+        console.error('❌ [SIGNUP-API] Record not found')
         return NextResponse.json({
           error: 'Registro no encontrado'
         }, { status: 404 })
@@ -170,14 +189,17 @@ export async function POST(request: NextRequest) {
 
     // Error de conexión a la base de datos
     if (error instanceof Prisma.PrismaClientInitializationError) {
+      console.error('❌ [SIGNUP-API] Database connection error')
       return NextResponse.json({
         error: 'Error de conexión a la base de datos. Por favor, intenta más tarde.'
       }, { status: 503 })
     }
 
     // Error genérico
+    console.error('❌ [SIGNUP-API] Unknown error type:', error)
     return NextResponse.json({
-      error: 'Error interno del servidor'
+      error: 'Error interno del servidor',
+      message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }

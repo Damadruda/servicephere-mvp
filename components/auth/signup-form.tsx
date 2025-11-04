@@ -111,7 +111,21 @@ export function SignupForm() {
         }
       } else {
         console.error('❌ [SIGNUP-FORM] Error en registro:', data)
-        toast.error(data.error || 'Error al crear la cuenta')
+        
+        // Mostrar errores de validación específicos si están disponibles
+        if (data.fieldErrors) {
+          console.error('❌ [SIGNUP-FORM] Errores de validación:', data.fieldErrors)
+          const errorMessages = Object.entries(data.fieldErrors)
+            .map(([field, message]) => `${field}: ${message}`)
+            .join(', ')
+          toast.error(`Errores de validación: ${errorMessages}`)
+        } else if (data.details && Array.isArray(data.details)) {
+          console.error('❌ [SIGNUP-FORM] Detalles de error:', data.details)
+          const firstError = data.details[0]
+          toast.error(`${firstError.path.join('.')}: ${firstError.message}`)
+        } else {
+          toast.error(data.error || 'Error al crear la cuenta')
+        }
       }
     } catch (error) {
       console.error('❌ [SIGNUP-FORM] Excepción en signup:', error)
