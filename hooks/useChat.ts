@@ -1,194 +1,195 @@
+/**
+ * useChat Hook
+ * 
+ * Custom hook for managing chat functionality in the application
+ */
 
-'use client'
-
-import { useState, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { toast } from 'react-hot-toast'
 
-interface Message {
+export interface ChatMessage {
   id: string
+  role: 'user' | 'assistant' | 'system'
   content: string
-  role: 'USER' | 'ASSISTANT' | 'SYSTEM'
-  createdAt: string
-  confidence?: number
-  sapContext?: any
-  feedback?: string
+  timestamp: Date
+  sessionId?: string
 }
 
-interface ChatSession {
+export interface ChatSession {
   id: string
-  sessionName: string
-  language: string
-  createdAt: string
-  lastActivity: string
-  _count: {
-    messages: number
-  }
-  messages?: Message[]
+  title: string
+  createdAt: Date
+  messages: ChatMessage[]
 }
 
 export function useChat() {
-  const { data: session } = useSession() || {}
-  const [sessions, setSessions] = useState<ChatSession[]>([])
-  const [activeSession, setActiveSession] = useState<ChatSession | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
+  const { data: session } = useSession()
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [isSending, setIsSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [sessions, setSessions] = useState<ChatSession[]>([])
 
-  useEffect(() => {
-    if (session) {
-      loadChatSessions()
+  // Initialize or create a new chat session
+  const startSession = useCallback(async () => {
+    if (!session?.user?.id) {
+      console.log('[useChat] No user session - skipping chat session creation')
+      return null
     }
-  }, [session])
 
-  const loadChatSessions = async () => {
-    setIsLoading(true)
     try {
-      const response = await fetch('/api/chat/session')
-      const data = await response.json()
-      
-      if (data.success) {
-        setSessions(data.sessions)
-        if (data.sessions.length > 0 && !activeSession) {
-          await switchToSession(data.sessions[0])
-        }
-      }
-    } catch (error) {
-      console.error('Error cargando sesiones:', error)
-      toast.error('Error cargando las conversaciones')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const switchToSession = async (chatSession: ChatSession) => {
-    setActiveSession(chatSession)
-    await loadMessages(chatSession.id)
-  }
-
-  const loadMessages = async (sessionId: string) => {
-    try {
-      const response = await fetch(`/api/chat/session/${sessionId}/messages`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setMessages(data.messages)
-      }
-    } catch (error) {
-      console.error('Error cargando mensajes:', error)
-    }
-  }
-
-  const createNewSession = async (sessionName?: string) => {
-    try {
+      setIsLoading(true)
       const response = await fetch('/api/chat/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionName: sessionName || `Consulta SAP - ${new Date().toLocaleDateString()}`,
-          language: 'es'
-        })
       })
 
-      const data = await response.json()
-      
-      if (data.success) {
-        await loadChatSessions()
-        setActiveSession(data.session)
-        setMessages([])
-        toast.success('Nueva conversación iniciada')
-        return data.session
+      if (!response.ok) {
+        throw new Error('Failed to create chat session')
       }
-    } catch (error) {
-      console.error('Error creando sesión:', error)
-      toast.error('Error creando nueva conversación')
+
+      const data = await response.json()
+      setCurrentSessionId(data.sessionId)
+      return data.sessionId
+    } catch (err) {
+      console.error('[useChat] Error creating session:', err)
+      setError(err instanceof Error ? err.message : 'Failed to create session')
+      return null
+    } finally {
+      setIsLoading(false)
     }
-  }
+  }, [session])
 
-  const sendMessage = async (content: string) => {
-    if (!content.trim() || !activeSession || isSending) return false
+  // Send a message in the chat
+  const sendMessage = useCallback(async (content: string) => {
+    if (!content.trim()) return
 
-    setIsSending(true)
-
-    // Agregar mensaje del usuario inmediatamente
-    const tempUserMessage: Message = {
-      id: 'temp-user',
-      content: content.trim(),
-      role: 'USER',
-      createdAt: new Date().toISOString()
+    // Get or create session ID
+    let sessionId = currentSessionId
+    if (!sessionId) {
+      sessionId = await startSession()
+      if (!sessionId) {
+        setError('Failed to initialize chat session')
+        return
+      }
     }
-    setMessages(prev => [...prev, tempUserMessage])
+
+    // Add user message immediately
+    const userMessage: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      role: 'user',
+      content,
+      timestamp: new Date(),
+      sessionId,
+    }
+    setMessages(prev => [...prev, userMessage])
 
     try {
+      setIsLoading(true)
+      setError(null)
+
       const response = await fetch('/api/chat/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: activeSession.id,
-          content: content.trim()
-        })
+        body: JSON.stringify({ sessionId, content }),
       })
+
+      if (!response.ok) {
+        throw new Error('Failed to send message')
+      }
 
       const data = await response.json()
+
+      // Add assistant response
+      const assistantMessage: ChatMessage = {
+        id: data.messageId || `${Date.now()}`,
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date(),
+        sessionId,
+      }
+      setMessages(prev => [...prev, assistantMessage])
+
+    } catch (err) {
+      console.error('[useChat] Error sending message:', err)
+      setError(err instanceof Error ? err.message : 'Failed to send message')
       
-      if (data.success) {
-        // Reemplazar mensaje temporal con los mensajes reales
-        setMessages(prev => [
-          ...prev.filter(m => m.id !== 'temp-user'),
-          data.userMessage,
-          data.assistantMessage
-        ])
-        return true
-      } else {
-        // Remover mensaje temporal si hay error
-        setMessages(prev => prev.filter(m => m.id !== 'temp-user'))
-        toast.error(data.error || 'Error enviando mensaje')
-        return false
+      // Add error message
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        role: 'system',
+        content: 'Lo siento, hubo un error procesando tu mensaje. Por favor intenta de nuevo.',
+        timestamp: new Date(),
       }
-    } catch (error) {
-      setMessages(prev => prev.filter(m => m.id !== 'temp-user'))
-      console.error('Error enviando mensaje:', error)
-      toast.error('Error de conexión')
-      return false
+      setMessages(prev => [...prev, errorMessage])
     } finally {
-      setIsSending(false)
+      setIsLoading(false)
     }
-  }
+  }, [currentSessionId, startSession])
 
-  const sendFeedback = async (messageId: string, feedback: string) => {
+  // Load chat history for a session
+  const loadSession = useCallback(async (sessionId: string) => {
     try {
-      const response = await fetch('/api/chat/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messageId, feedback })
-      })
+      setIsLoading(true)
+      const response = await fetch(`/api/chat/session/${sessionId}/messages`)
 
-      if (response.ok) {
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageId 
-            ? { ...msg, feedback }
-            : msg
-        ))
-        toast.success('Gracias por tu feedback')
+      if (!response.ok) {
+        throw new Error('Failed to load session')
       }
-    } catch (error) {
-      console.error('Error enviando feedback:', error)
+
+      const data = await response.json()
+      setMessages(data.messages || [])
+      setCurrentSessionId(sessionId)
+    } catch (err) {
+      console.error('[useChat] Error loading session:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load session')
+    } finally {
+      setIsLoading(false)
     }
-  }
+  }, [])
+
+  // Load all user sessions
+  const loadSessions = useCallback(async () => {
+    if (!session?.user?.id) return
+
+    try {
+      const response = await fetch('/api/chat/session')
+
+      if (!response.ok) {
+        throw new Error('Failed to load sessions')
+      }
+
+      const data = await response.json()
+      setSessions(data.sessions || [])
+    } catch (err) {
+      console.error('[useChat] Error loading sessions:', err)
+    }
+  }, [session])
+
+  // Clear current chat
+  const clearChat = useCallback(() => {
+    setMessages([])
+    setCurrentSessionId(null)
+    setError(null)
+  }, [])
+
+  // Initialize on mount
+  useEffect(() => {
+    if (session?.user?.id) {
+      loadSessions()
+    }
+  }, [session, loadSessions])
 
   return {
-    // Estados
-    sessions,
-    activeSession,
     messages,
     isLoading,
-    isSending,
-    
-    // Acciones
-    loadChatSessions,
-    switchToSession,
-    createNewSession,
+    error,
+    currentSessionId,
+    sessions,
     sendMessage,
-    sendFeedback
+    startSession,
+    loadSession,
+    loadSessions,
+    clearChat,
   }
 }

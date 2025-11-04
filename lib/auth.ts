@@ -183,12 +183,19 @@ export const authOptions: NextAuthOptions = {
   // Secret (CRÍTICO para producción)
   secret: NEXTAUTH_SECRET,
   
-  // Trust host for Vercel and custom domains (CRITICAL for production)
-  // This allows NextAuth to work with custom domains like www.servicephere.com
+  // CRITICAL: Trust host configuration for Vercel and custom domains
+  // This allows NextAuth to work properly with:
+  // - Custom domains (www.servicephere.com)
+  // - Vercel preview deployments
+  // - Development environments
   trustHost: true,
 
   // Configuración de URLs (importante para Vercel)
   useSecureCookies: process.env.NODE_ENV === 'production',
+  
+  // IMPORTANT: Base path configuration
+  // This ensures NextAuth knows where its routes are located
+  basePath: '/api/auth',
   
   // Configuración de cookies
   cookies: {

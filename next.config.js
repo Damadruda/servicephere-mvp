@@ -28,15 +28,10 @@ const nextConfig = {
   
   // Experimental features for better performance
   experimental: {
-    // Enable logging for better debugging
-    logging: {
-      level: 'verbose',
+    // Server actions configuration
+    serverActions: {
+      bodySizeLimit: '2mb',
     },
-  },
-  
-  // Server actions configuration (if needed in future)
-  serverActions: {
-    bodySizeLimit: '2mb',
   },
   
   // Optimize for production
