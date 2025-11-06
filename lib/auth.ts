@@ -23,7 +23,6 @@ import { prisma } from './prisma'
  * 
  * FIXES APLICADOS:
  * - Configuración segura de secret con fallback
- * - trustHost habilitado para dominios personalizados
  * - Callbacks mejorados con mejor manejo de errores
  * - Logger mejorado para debugging en producción
  * - Configuración de cookies optimizada
@@ -64,7 +63,6 @@ if (process.env.NODE_ENV === 'development' && typeof window === 'undefined') {
   console.log('   - Has custom secret:', !!process.env.NEXTAUTH_SECRET)
   console.log('   - Node env:', process.env.NODE_ENV)
   console.log('   - NextAuth URL:', process.env.NEXTAUTH_URL || 'auto-detect')
-  console.log('   - Trust host:', true)
 }
 
 export const authOptions: NextAuthOptions = {
@@ -301,12 +299,6 @@ export const authOptions: NextAuthOptions = {
   // Secret (CRÍTICO para producción)
   secret: NEXTAUTH_SECRET,
   
-  // CRITICAL: Trust host configuration for Vercel and custom domains
-  // This allows NextAuth to work properly with:
-  // - Custom domains (www.servicephere.com)
-  // - Vercel preview deployments
-  // - Development environments
-  trustHost: true,
 
   // Configuración de URLs (importante para Vercel)
   useSecureCookies: process.env.NODE_ENV === 'production',
