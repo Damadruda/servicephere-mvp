@@ -303,10 +303,6 @@ export const authOptions: NextAuthOptions = {
   // Configuración de URLs (importante para Vercel)
   useSecureCookies: process.env.NODE_ENV === 'production',
   
-  // IMPORTANT: Base path configuration
-  // This ensures NextAuth knows where its routes are located
-  basePath: '/api/auth',
-  
   // Configuración de cookies
   cookies: {
     sessionToken: {
