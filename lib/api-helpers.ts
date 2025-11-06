@@ -77,7 +77,6 @@ export function handlePrismaError(error: any) {
   const prismaErrors: Record<string, string> = {
     P2002: 'Ya existe un registro con estos datos',
     P2003: 'Referencia inválida a otro registro',
-    P2025: 'Registro no encontrado',
     P2014: 'La relación requerida no existe',
     P2015: 'No se pudo encontrar el registro relacionado',
     P2016: 'Error de interpretación de la consulta',
@@ -89,7 +88,7 @@ export function handlePrismaError(error: any) {
     P2022: 'La columna no existe en la base de datos',
     P2023: 'Datos inconsistentes en la columna',
     P2024: 'Tiempo de espera agotado obteniendo una conexión del pool',
-    P2025: 'Una operación falló porque depende de uno o más registros requeridos',
+    P2025: 'Registro no encontrado o una operación falló porque depende de registros requeridos',
   }
   
   // Check if it's a Prisma error
