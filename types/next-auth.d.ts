@@ -10,6 +10,7 @@ declare module 'next-auth' {
       userType: 'CLIENT' | 'PROVIDER' | 'ADMIN'
       isVerified: boolean
       profile?: any
+      image?: string | null
     }
   }
 
@@ -20,11 +21,13 @@ declare module 'next-auth' {
     userType: 'CLIENT' | 'PROVIDER' | 'ADMIN'
     isVerified: boolean
     profile?: any
+    image?: string | null
   }
 }
 
 declare module 'next-auth/jwt' {
   interface JWT {
+    id: string
     userType: 'CLIENT' | 'PROVIDER' | 'ADMIN'
     isVerified: boolean
     profile?: any
