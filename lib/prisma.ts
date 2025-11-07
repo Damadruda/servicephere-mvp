@@ -1,4 +1,4 @@
-// lib/prisma-singleton.ts
+// lib/prisma.ts
 // SOLUCIÓN: Singleton pattern para Prisma que funciona en Vercel
 
 import { PrismaClient } from '@prisma/client'

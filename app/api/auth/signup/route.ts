@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma-singleton' // Usar el nuevo singleton
+import { prisma } from '@/lib/prisma'
 
 // Configuración para Vercel
 export const runtime = 'nodejs'
