@@ -65,26 +65,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Don't refetch when offline (prevents unnecessary errors)
       refetchWhenOffline={false}
-      
-      /**
-       * Error Handler
-       * 
-       * Catches authentication errors and logs them without crashing the app.
-       * This is critical for handling network errors, expired tokens, etc.
-       */
-      onError={(error) => {
-        // Only log errors, don't crash the app
-        console.error('[AUTH PROVIDER ERROR]', error)
-        
-        // In development, provide more detailed error info
-        if (process.env.NODE_ENV === 'development') {
-          console.error('[AUTH PROVIDER ERROR] Details:', {
-            name: error.name,
-            message: error.message,
-            stack: error.stack
-          })
-        }
-      }}
     >
       {children}
     </SessionProvider>
