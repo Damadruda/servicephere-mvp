@@ -3,9 +3,8 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageCircle, X, Minimize2, Maximize2, Send, User, Bot, ThumbsUp, ThumbsDown, Star } from 'lucide-react'
+import { MessageCircle, X, Minimize2, Maximize2, Send, User, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -22,42 +21,34 @@ export default function ChatBot({ className = '' }: ChatBotProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [inputMessage, setInputMessage] = useState('')
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null)
-  const [showFeedback, setShowFeedback] = useState<string | null>(null)
 
   const {
     sessions,
-    activeSession,
     messages,
     isLoading,
-    isSending,
-    createNewSession,
+    currentSessionId,
     sendMessage,
-    sendFeedback
+    startSession,
   } = useChat()
+
+  // Derivar activeSession de sessions y currentSessionId
+  const activeSession = sessions.find(s => s.id === currentSessionId)
 
   const handleToggleChat = async () => {
     setIsOpen(!isOpen)
     
     if (!isOpen && !activeSession && sessions.length === 0) {
       // Crear sesión automáticamente al abrir el chat
-      await createNewSession('Consulta SAP')
+      await startSession()
     }
   }
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!inputMessage.trim() || isSending || !activeSession) return
+    if (!inputMessage.trim() || isLoading || !currentSessionId) return
 
-    const success = await sendMessage(inputMessage)
-    if (success) {
-      setInputMessage('')
-    }
-  }
-
-  const handleFeedback = async (messageId: string, rating: string) => {
-    await sendFeedback(messageId, rating)
-    setShowFeedback(null)
+    await sendMessage(inputMessage)
+    setInputMessage('')
   }
 
   if (!session) {
@@ -165,79 +156,34 @@ export default function ChatBot({ className = '' }: ChatBotProps) {
                           <div
                             key={message.id}
                             className={`flex ${
-                              message.role === 'USER' ? 'justify-end' : 'justify-start'
+                              message.role === 'user' ? 'justify-end' : 'justify-start'
                             }`}
                           >
                             <div
                               className={`max-w-[80%] rounded-lg p-3 ${
-                                message.role === 'USER'
+                                message.role === 'user'
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                               }`}
                             >
                               <div className="flex items-start space-x-2">
-                                {message.role === 'ASSISTANT' && (
+                                {message.role === 'assistant' && (
                                   <Bot className="h-4 w-4 mt-0.5 flex-shrink-0" />
                                 )}
-                                {message.role === 'USER' && (
+                                {message.role === 'user' && (
                                   <User className="h-4 w-4 mt-0.5 flex-shrink-0" />
                                 )}
                                 <div className="flex-1">
                                   <p className="text-sm whitespace-pre-wrap">
                                     {message.content}
                                   </p>
-                                  
-                                  {/* Confidence indicator for assistant messages */}
-                                  {message.role === 'ASSISTANT' && message.confidence && (
-                                    <div className="mt-2 flex items-center space-x-2">
-                                      <div className="flex space-x-1">
-                                        {[1, 2, 3, 4, 5].map((star) => (
-                                          <Star
-                                            key={star}
-                                            className={`h-3 w-3 ${
-                                              star <= (message.confidence! * 5)
-                                                ? 'text-yellow-500 fill-current'
-                                                : 'text-gray-300'
-                                            }`}
-                                          />
-                                        ))}
-                                      </div>
-                                      <span className="text-xs text-gray-500">
-                                        Confianza: {Math.round(message.confidence * 100)}%
-                                      </span>
-                                    </div>
-                                  )}
-
-                                  {/* Feedback buttons for assistant messages */}
-                                  {message.role === 'ASSISTANT' && (
-                                    <div className="mt-2 flex items-center space-x-2">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-xs h-6 px-2"
-                                        onClick={() => handleFeedback(message.id, '5')}
-                                      >
-                                        <ThumbsUp className="h-3 w-3 mr-1" />
-                                        Útil
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-xs h-6 px-2"
-                                        onClick={() => handleFeedback(message.id, '1')}
-                                      >
-                                        <ThumbsDown className="h-3 w-3 mr-1" />
-                                        No útil
-                                      </Button>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             </div>
                           </div>
                         ))}
                         
-                        {isSending && (
+                        {isLoading && (
                           <div className="flex justify-start">
                             <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
                               <div className="flex items-center space-x-2">
@@ -274,7 +220,7 @@ export default function ChatBot({ className = '' }: ChatBotProps) {
                       />
                       <Button
                         type="submit"
-                        disabled={isSending || !inputMessage.trim() || !activeSession}
+                        disabled={isLoading || !inputMessage.trim() || !currentSessionId}
                         className="bg-blue-600 hover:bg-blue-700"
                       >
                         <Send className="h-4 w-4" />
