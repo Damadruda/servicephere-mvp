@@ -6,7 +6,23 @@
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const diagnostics = {
+  const diagnostics: {
+    success: boolean
+    message: string
+    timestamp: string
+    environment: {
+      nodeEnv: string | undefined
+      nextAuthSecret: string
+      nextAuthUrl: string
+      databaseUrl: string
+    }
+    routes: {
+      thisEndpoint: string
+      nextAuthEndpoint: string
+      expectedRoutes: string[]
+    }
+    recommendations: string[]
+  } = {
     success: true,
     message: 'NextAuth diagnostics endpoint',
     timestamp: new Date().toISOString(),
