@@ -89,7 +89,6 @@ export function handlePrismaError(error: any) {
     P2022: 'La columna no existe en la base de datos',
     P2023: 'Datos inconsistentes en la columna',
     P2024: 'Tiempo de espera agotado obteniendo una conexión del pool',
-    P2025: 'Una operación falló porque depende de uno o más registros requeridos',
   }
   
   // Check if it's a Prisma error
