@@ -301,14 +301,22 @@ export const authOptions: NextAuthOptions = {
   // Secret (CRÍTICO para producción)
   secret: NEXTAUTH_SECRET,
   
-  // NOTE: trustHost property has been deprecated in NextAuth.js v4.24+
+  /**
+   * IMPORTANT NOTES ON NEXTAUTH v4.24.11 CONFIGURATION:
+   * 
+   * 1. trustHost: REMOVED - This property was deprecated in NextAuth.js v4.24+
+   * 
+   * 2. basePath: NOT A VALID PROPERTY - basePath is NOT part of AuthOptions interface.
+   *    The base path for NextAuth routes is determined by:
+   *    - The location of your [...nextauth]/route.ts file (app/api/auth/[...nextauth]/route.ts)
+   *    - The NEXTAUTH_URL environment variable (should include full path if custom)
+   *    - Passing basePath prop to <SessionProvider> in client components if needed
+   * 
+   * 3. useSecureCookies: VALID - Controls whether cookies are HTTPS-only (auto-detected by default)
+   */
 
   // Configuración de URLs (importante para Vercel)
   useSecureCookies: process.env.NODE_ENV === 'production',
-  
-  // IMPORTANT: Base path configuration
-  // This ensures NextAuth knows where its routes are located
-  basePath: '/api/auth',
   
   // Configuración de cookies
   cookies: {
