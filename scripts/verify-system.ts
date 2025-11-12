@@ -10,7 +10,7 @@ const prisma = new PrismaClient({
 
 async function verifySystem() {
   console.log('🔍 VERIFICACIÓN DEL SISTEMA SERVICEPHERE\n')
-  console.log('='.'='.repeat(40))
+  console.log('='.repeat(40))
   
   // 1. Verificar variables de entorno
   console.log('\n📋 VARIABLES DE ENTORNO:')
