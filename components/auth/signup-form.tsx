@@ -108,9 +108,9 @@ export function SignupForm() {
           console.log('✅ [SIGNUP-FORM] Login automático exitoso, redirigiendo a dashboard...')
           toast.success('¡Bienvenido a ServiceSphere!')
           
-          // Redirigir al dashboard
-          router.push('/dashboard')
-          router.refresh()
+          // Usar window.location para forzar recarga completa y asegurar que la sesión esté establecida
+          // Esto evita problemas de timing con el middleware y router
+          window.location.href = '/dashboard'
         } else {
           console.error('❌ [SIGNUP-FORM] Error en login automático:', {
             error: signInResult?.error,

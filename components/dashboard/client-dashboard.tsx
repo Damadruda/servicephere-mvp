@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Briefcase, MessageSquare, FileText, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
-import { Header } from '@/components/layout/header'
 import { SAPChatBot } from '@/components/sap-chatbot'
 import { Project, Quotation } from '@/lib/types'
 import { motion } from 'framer-motion'
@@ -82,7 +81,6 @@ export function ClientDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <div className="container mx-auto max-w-7xl px-4 py-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {[1, 2, 3, 4].map((i) => (
@@ -97,8 +95,6 @@ export function ClientDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      
       <main className="container mx-auto max-w-7xl px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
