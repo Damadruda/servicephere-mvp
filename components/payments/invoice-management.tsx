@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,7 +35,8 @@ interface InvoiceManagementProps {
   invoices: any[]
 }
 
-export function InvoiceManagement({ userId, invoices }: InvoiceManagementProps) {
+// PERFORMANCE FIX: Memoized to prevent unnecessary re-renders (612 lines component)
+export const InvoiceManagement = React.memo(function InvoiceManagement({ userId, invoices }: InvoiceManagementProps) {
   const [createInvoiceDialog, setCreateInvoiceDialog] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
   const [invoiceFilter, setInvoiceFilter] = useState('all')
@@ -609,4 +610,4 @@ export function InvoiceManagement({ userId, invoices }: InvoiceManagementProps) 
       </Card>
     </div>
   )
-}
+})

@@ -2,22 +2,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma-singleton'
 
 
 // Configuración para evitar generación estática durante el build
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-// Lazy initialization de PrismaClient para evitar ejecución en build time
-let prisma: PrismaClient | null = null
-
-function getPrismaClient() {
-  if (!prisma) {
-    prisma = new PrismaClient()
-  }
-  return prisma
-}
 
 
 export async function GET(request: NextRequest) {
@@ -32,22 +22,23 @@ export async function GET(request: NextRequest) {
     }
 
     const [totalProjects, activeProjects, pendingQuotations, contracts] = await Promise.all([
-      getPrismaClient().project.count({
+      prisma.project.count({
         where: { clientId: session.user.id }
       }),
-      getPrismaClient().project.count({
-        where: { 
+      prisma.project.count({
+        where: {
           clientId: session.user.id,
           status: { in: ['PUBLISHED', 'IN_PROGRESS'] }
         }
       }),
-      getPrismaClient().quotation.count({
+      prisma.quotation.count({
         where: {
           project: { clientId: session.user.id },
           status: 'PENDING'
         }
       }),
-      getPrismaClient().contract.findMany({
+      // PERFORMANCE FIX: Only select totalValue, no pagination needed for aggregation
+      prisma.contract.findMany({
         where: { clientId: session.user.id },
         select: { totalValue: true }
       })

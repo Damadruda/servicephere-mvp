@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,7 +39,8 @@ interface DisputeCenterProps {
   userId: string
 }
 
-export function DisputeCenter({ userId }: DisputeCenterProps) {
+// PERFORMANCE FIX: Memoized to prevent unnecessary re-renders (786 lines component)
+export const DisputeCenter = React.memo(function DisputeCenter({ userId }: DisputeCenterProps) {
   const [createDisputeDialog, setCreateDisputeDialog] = useState(false)
   const [selectedDispute, setSelectedDispute] = useState<any>(null)
   const [disputeFilter, setDisputeFilter] = useState('all')
@@ -783,4 +784,4 @@ export function DisputeCenter({ userId }: DisputeCenterProps) {
       </Card>
     </div>
   )
-}
+})

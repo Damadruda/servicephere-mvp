@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -36,7 +36,8 @@ interface FinancialReportsProps {
   transactions: any[]
 }
 
-export function FinancialReports({ userId, stats, transactions }: FinancialReportsProps) {
+// PERFORMANCE FIX: Memoized to prevent unnecessary re-renders (679 lines component)
+export const FinancialReports = React.memo(function FinancialReports({ userId, stats, transactions }: FinancialReportsProps) {
   const [selectedPeriod, setSelectedPeriod] = useState('30d')
   const [reportType, setReportType] = useState('overview')
 
@@ -676,4 +677,4 @@ export function FinancialReports({ userId, stats, transactions }: FinancialRepor
       </Tabs>
     </div>
   )
-}
+})

@@ -2,67 +2,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma-singleton'
 
 
 // Configuración para evitar generación estática durante el build
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-// Lazy initialization de PrismaClient para evitar ejecución en build time
-let prisma: PrismaClient | null = null
-
-function getPrismaClient() {
-  if (!prisma) {
-    prisma = new PrismaClient()
-  }
-  return prisma
-}
-
-
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id || session.user.userType !== 'PROVIDER') {
-      return NextResponse.json(
-        { error: 'No autorizado' },
-        { status: 401 }
-      )
-    }
-
-    const quotations = await getPrismaClient().quotation.findMany({
-      where: {
-        providerId: session.user.id
-      },
-      include: {
-        project: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            industry: true,
-            budget: true
-          }
-        }
-      },
-      orderBy: {
-        submittedAt: 'desc'
-      }
-    })
-
-    // Convert Decimal to number for JSON serialization
-    const serializedQuotations = quotations.map(quotation => ({
-      ...quotation,
-      totalCost: Number(quotation.totalCost)
-    }))
-
-    return NextResponse.json(serializedQuotations)
-  } catch (error) {
-    console.error('Error fetching provider quotations:', error)
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    )
-  }
-}
