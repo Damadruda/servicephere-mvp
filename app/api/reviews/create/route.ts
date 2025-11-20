@@ -2,23 +2,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma-singleton'
 import { z } from 'zod'
 
 
 // Configuración para evitar generación estática durante el build
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-// Lazy initialization de PrismaClient para evitar ejecución en build time
-let prisma: PrismaClient | null = null
-
-function getPrismaClient() {
-  if (!prisma) {
-    prisma = new PrismaClient()
-  }
-  return prisma
-}
 
 
 const createReviewSchema = z.object({
@@ -53,7 +43,7 @@ export async function POST(request: NextRequest) {
     const validatedData = createReviewSchema.parse(body)
 
     // Verificar que el proyecto existe y el usuario está involucrado
-    const project = await getPrismaClient().project.findUnique({
+    const project = await prisma.project.findUnique({
       where: { id: validatedData.projectId },
       include: {
         quotations: {
@@ -92,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar que no existe ya un review del mismo tipo para este proyecto
-    const existingReview = await getPrismaClient().review.findFirst({
+    const existingReview = await prisma.review.findFirst({
       where: {
         projectId: validatedData.projectId,
         reviewerId: session.user.id,
@@ -118,7 +108,7 @@ export async function POST(request: NextRequest) {
       : null
 
     // Crear el review
-    const review = await getPrismaClient().review.create({
+    const review = await prisma.review.create({
       data: {
         projectId: validatedData.projectId,
         reviewerId: session.user.id,
@@ -183,7 +173,7 @@ export async function POST(request: NextRequest) {
 async function updateUserRatings(userId: string) {
   try {
     // Obtener todas las reviews del usuario
-    const reviews = await getPrismaClient().review.findMany({
+    const reviews = await prisma.review.findMany({
       where: {
         targetId: userId,
         status: { in: ['VERIFIED', 'APPROVED'] },
@@ -193,49 +183,83 @@ async function updateUserRatings(userId: string) {
 
     if (reviews.length === 0) return
 
-    // Calcular promedios
+    // Single-pass aggregation - calculate all metrics in one loop (PERFORMANCE FIX)
+    const stats = reviews.reduce((acc, review) => {
+      // Overall rating
+      acc.overallSum += review.overallRating
+
+      // Individual rating sums and counts
+      if (review.communicationRating) {
+        acc.commSum += review.communicationRating
+        acc.commCount++
+      }
+      if (review.qualityRating) {
+        acc.qualitySum += review.qualityRating
+        acc.qualityCount++
+      }
+      if (review.timelinessRating) {
+        acc.timelinessSum += review.timelinessRating
+        acc.timelinessCount++
+      }
+      if (review.professionalismRating) {
+        acc.profSum += review.professionalismRating
+        acc.profCount++
+      }
+      if (review.valueRating) {
+        acc.valueSum += review.valueRating
+        acc.valueCount++
+      }
+      if (review.technicalRating) {
+        acc.techSum += review.technicalRating
+        acc.techCount++
+      }
+
+      // Star distribution
+      switch(review.overallRating) {
+        case 5: acc.fiveStarCount++; break
+        case 4: acc.fourStarCount++; break
+        case 3: acc.threeStarCount++; break
+        case 2: acc.twoStarCount++; break
+        case 1: acc.oneStarCount++; break
+      }
+
+      // Recommendation and verification
+      if (review.wouldRecommend) acc.recommendCount++
+      if (review.isVerified) acc.verifiedCount++
+
+      return acc
+    }, {
+      overallSum: 0,
+      commSum: 0, commCount: 0,
+      qualitySum: 0, qualityCount: 0,
+      timelinessSum: 0, timelinessCount: 0,
+      profSum: 0, profCount: 0,
+      valueSum: 0, valueCount: 0,
+      techSum: 0, techCount: 0,
+      fiveStarCount: 0, fourStarCount: 0, threeStarCount: 0, twoStarCount: 0, oneStarCount: 0,
+      recommendCount: 0, verifiedCount: 0
+    })
+
+    // Calculate final averages
     const totalReviews = reviews.length
-    const averageRating = reviews.reduce((sum, r) => sum + r.overallRating, 0) / totalReviews
-    
-    const avgCommunication = reviews.filter(r => r.communicationRating).length > 0 
-      ? reviews.reduce((sum, r) => sum + (r.communicationRating || 0), 0) / reviews.filter(r => r.communicationRating).length
-      : 0
+    const averageRating = stats.overallSum / totalReviews
+    const avgCommunication = stats.commCount > 0 ? stats.commSum / stats.commCount : 0
+    const avgQuality = stats.qualityCount > 0 ? stats.qualitySum / stats.qualityCount : 0
+    const avgTimeliness = stats.timelinessCount > 0 ? stats.timelinessSum / stats.timelinessCount : 0
+    const avgProfessionalism = stats.profCount > 0 ? stats.profSum / stats.profCount : 0
+    const avgValue = stats.valueCount > 0 ? stats.valueSum / stats.valueCount : 0
+    const avgTechnical = stats.techCount > 0 ? stats.techSum / stats.techCount : 0
+    const recommendationRate = (stats.recommendCount / totalReviews) * 100
 
-    const avgQuality = reviews.filter(r => r.qualityRating).length > 0
-      ? reviews.reduce((sum, r) => sum + (r.qualityRating || 0), 0) / reviews.filter(r => r.qualityRating).length
-      : 0
-
-    const avgTimeliness = reviews.filter(r => r.timelinessRating).length > 0
-      ? reviews.reduce((sum, r) => sum + (r.timelinessRating || 0), 0) / reviews.filter(r => r.timelinessRating).length
-      : 0
-
-    const avgProfessionalism = reviews.filter(r => r.professionalismRating).length > 0
-      ? reviews.reduce((sum, r) => sum + (r.professionalismRating || 0), 0) / reviews.filter(r => r.professionalismRating).length
-      : 0
-
-    const avgValue = reviews.filter(r => r.valueRating).length > 0
-      ? reviews.reduce((sum, r) => sum + (r.valueRating || 0), 0) / reviews.filter(r => r.valueRating).length
-      : 0
-
-    const avgTechnical = reviews.filter(r => r.technicalRating).length > 0
-      ? reviews.reduce((sum, r) => sum + (r.technicalRating || 0), 0) / reviews.filter(r => r.technicalRating).length
-      : 0
-
-    // Contar distribución de estrellas
-    const fiveStarCount = reviews.filter(r => r.overallRating === 5).length
-    const fourStarCount = reviews.filter(r => r.overallRating === 4).length
-    const threeStarCount = reviews.filter(r => r.overallRating === 3).length
-    const twoStarCount = reviews.filter(r => r.overallRating === 2).length
-    const oneStarCount = reviews.filter(r => r.overallRating === 1).length
-
-    // Calcular tasa de recomendación
-    const recommendationRate = (reviews.filter(r => r.wouldRecommend).length / totalReviews) * 100
-
-    // Contar reviews verificadas
-    const verifiedReviewsCount = reviews.filter(r => r.isVerified).length
+    const fiveStarCount = stats.fiveStarCount
+    const fourStarCount = stats.fourStarCount
+    const threeStarCount = stats.threeStarCount
+    const twoStarCount = stats.twoStarCount
+    const oneStarCount = stats.oneStarCount
+    const verifiedReviewsCount = stats.verifiedCount
 
     // Actualizar o crear UserRating
-    await getPrismaClient().userRating.upsert({
+    await prisma.userRating.upsert({
       where: { userId },
       update: {
         averageRating,

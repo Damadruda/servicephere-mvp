@@ -136,9 +136,11 @@ model User {
   accounts Account[]
   sessions Session[]
 
-  // Chatbot relations  
+  // Chatbot relations
   chatSessions ChatSession[] @relation("ChatSessions")
 
+  @@index([email])  // PERFORMANCE: Auth lookups
+  @@index([userType])  // PERFORMANCE: Filter by user type
   @@map("users")
 }
 
@@ -350,6 +352,8 @@ model Project {
   conversations   Conversation[]
   reviews         Review[]
 
+  @@index([clientId, status])  // PERFORMANCE: Client's projects by status
+  @@index([status, publishedAt])  // PERFORMANCE: Published projects listing
   @@map("projects")
 }
 
@@ -413,6 +417,9 @@ model Quotation {
   reviews         Review[]
 
   @@unique([projectId, providerId])
+  @@index([projectId, status])  // PERFORMANCE: Project quotations by status
+  @@index([providerId, status])  // PERFORMANCE: Provider quotations by status
+  @@index([status, submittedAt])  // PERFORMANCE: Recent quotations by status
   @@map("quotations")
 }
 
@@ -518,6 +525,9 @@ model Contract {
   escrowTransactions EscrowTransaction[]
   reviews           Review[]
 
+  @@index([clientId, status])  // PERFORMANCE: Client contracts by status
+  @@index([providerId, status])  // PERFORMANCE: Provider contracts by status
+  @@index([quotationId])  // PERFORMANCE: Quotation to contract lookup
   @@map("contracts")
 }
 
@@ -639,6 +649,9 @@ model Conversation {
   messages        Message[]
 
   @@unique([projectId, clientId, providerId])
+  @@index([clientId])  // PERFORMANCE: Client conversations
+  @@index([providerId])  // PERFORMANCE: Provider conversations
+  @@index([projectId])  // PERFORMANCE: Project conversations
   @@map("conversations")
 }
 
@@ -659,10 +672,12 @@ model Message {
   
   isRead          Boolean     @default(false)
   readAt          DateTime?
-  
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  @@index([conversationId, createdAt])  // PERFORMANCE: Conversation messages chronologically
+  @@index([receiverId, isRead])  // PERFORMANCE: Unread messages
   @@map("messages")
 }
 
@@ -679,9 +694,11 @@ model Notification {
   
   isRead          Boolean           @default(false)
   readAt          DateTime?
-  
+
   createdAt       DateTime          @default(now())
 
+  @@index([userId, isRead])  // PERFORMANCE: User's unread notifications
+  @@index([userId, createdAt])  // PERFORMANCE: User's recent notifications
   @@map("notifications")
 }
 
@@ -785,6 +802,7 @@ model ReviewVote {
   createdAt DateTime  @default(now())
   
   @@unique([reviewId, userId])
+  @@index([reviewId])  // PERFORMANCE: Review votes lookup
   @@map("review_votes")
 }
 
@@ -803,7 +821,9 @@ model ReviewReport {
   resolution  String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  
+
+  @@index([reviewId, status])  // PERFORMANCE: Review reports by status
+  @@index([reporterId])  // PERFORMANCE: Reporter's reports
   @@map("review_reports")
 }
 
@@ -916,6 +936,9 @@ model EscrowTransaction {
   disputes Dispute[]
   invoices Invoice[]
 
+  @@index([payerId, status])  // PERFORMANCE: Payer's transactions by status
+  @@index([payeeId, status])  // PERFORMANCE: Payee's transactions by status
+  @@index([contractId])  // PERFORMANCE: Contract transactions
   @@map("escrow_transactions")
 }
 
@@ -951,6 +974,8 @@ model WalletTransaction {
   wallet      Wallet @relation(fields: [walletId], references: [id])
   relatedUser User?  @relation("WalletTransactionRelated", fields: [relatedUserId], references: [id])
 
+  @@index([walletId, createdAt])  // PERFORMANCE: Wallet transaction history
+  @@index([walletId, status])  // PERFORMANCE: Wallet transactions by status
   @@map("wallet_transactions")
 }
 
@@ -1101,6 +1126,8 @@ model ChatSession {
 
   messages     ChatMessage[]
 
+  @@index([userId, isActive])  // PERFORMANCE: User's active chat sessions
+  @@index([userId, lastActivity])  // PERFORMANCE: Recent chat sessions
   @@map("chat_sessions")
 }
 

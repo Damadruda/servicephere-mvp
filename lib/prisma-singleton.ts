@@ -9,11 +9,14 @@ declare global {
 }
 
 const prismaClientSingleton = () => {
-  console.log('🔧 [PRISMA] Inicializando cliente de base de datos...')
-  
+  // PERFORMANCE FIX: Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔧 [PRISMA] Inicializando cliente de base de datos...')
+  }
+
   const client = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' 
-      ? ['query', 'error', 'warn'] 
+    log: process.env.NODE_ENV === 'development'
+      ? ['query', 'error', 'warn']
       : ['error'],
     datasources: {
       db: {
@@ -21,17 +24,19 @@ const prismaClientSingleton = () => {
       }
     }
   })
-  
+
   // Verificar conexión
   client.$connect()
     .then(() => {
-      console.log('✅ [PRISMA] Conexión a base de datos establecida')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ [PRISMA] Conexión a base de datos establecida')
+      }
     })
     .catch((error) => {
       console.error('❌ [PRISMA] Error conectando a la base de datos:', error)
       throw error
     })
-  
+
   return client
 }
 
@@ -51,7 +56,10 @@ export async function checkDatabaseConnection(): Promise<boolean> {
     await prisma.$queryRaw`SELECT 1`
     return true
   } catch (error) {
-    console.error('❌ Database connection check failed:', error)
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('❌ Database connection check failed:', error)
+    }
     return false
   }
 }

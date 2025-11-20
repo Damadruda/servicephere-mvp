@@ -6,17 +6,21 @@ const nextConfig = {
   
   // ESLint configuration
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,  // PERFORMANCE FIX: Re-enable to catch issues
   },
-  
+
   // TypeScript configuration
   typescript: {
     ignoreBuildErrors: false,
   },
-  
-  // Image optimization
-  images: { 
-    unoptimized: true 
+
+  // Image optimization - PERFORMANCE FIX: Enable for better performance
+  images: {
+    unoptimized: false,  // Enable Next.js image optimization
+    formats: ['image/avif', 'image/webp'],  // Modern formats for better compression
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,  // Cache optimized images for 60 seconds
   },
   
   // Logging configuration
