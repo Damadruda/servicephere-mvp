@@ -92,8 +92,8 @@ export async function GET(request: NextRequest) {
       averageRating = totalRating / reviewsReceived.length
     }
 
-    // 6. Profile views (using existing field or default to 0)
-    const profileViews = providerProfile.profileViews || 0
+    // 6. Profile views - TODO: Implement view tracking in future
+    const profileViews = 0
 
     // 7. Return stats
     const stats = {
