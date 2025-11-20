@@ -144,6 +144,20 @@ model User {
   @@map("users")
 }
 
+// Password Reset Token model
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])  // PERFORMANCE: Lookup by email
+  @@index([token])  // PERFORMANCE: Lookup by token
+  @@map("password_reset_tokens")
+}
+
 // Perfil específico para clientes (empresas que necesitan SAP)
 model ClientProfile {
   id            String  @id @default(cuid())
