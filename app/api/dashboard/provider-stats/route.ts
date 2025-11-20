@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     // 5. Get average rating from reviews
     const reviewsReceived = await prisma.review.findMany({
       where: {
-        revieweeId: session.user.id
+        targetId: session.user.id
       },
       select: {
         communicationRating: true,
