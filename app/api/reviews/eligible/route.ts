@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     // Obtener proyectos completados donde el usuario está involucrado
     // y que aún no han sido calificados
-    const eligibleProjects = await getPrismaClient().project.findMany({
+    const eligibleProjects = await prisma.project.findMany({
       where: {
         status: 'COMPLETED',
         OR: [
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
 
     // Obtener estadísticas adicionales
     const totalEligible = eligibleReviews.length
-    const totalCompleted = await getPrismaClient().review.count({
+    const totalCompleted = await prisma.review.count({
       where: { reviewerId: session.user.id }
     })
 
