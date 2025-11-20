@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,7 +36,8 @@ interface WalletManagementProps {
   balance: any
 }
 
-export function WalletManagement({ userId, balance }: WalletManagementProps) {
+// PERFORMANCE FIX: Memoized to prevent unnecessary re-renders (608 lines component)
+export const WalletManagement = React.memo(function WalletManagement({ userId, balance }: WalletManagementProps) {
   const [showBalance, setShowBalance] = useState(true)
   const [topUpDialog, setTopUpDialog] = useState(false)
   const [withdrawDialog, setWithdrawDialog] = useState(false)
@@ -605,4 +606,4 @@ export function WalletManagement({ userId, balance }: WalletManagementProps) {
       </DialogContent>
     </div>
   )
-}
+})

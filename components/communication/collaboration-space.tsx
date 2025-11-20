@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,7 +40,8 @@ interface CollaborationSpaceProps {
   activeContracts: any[]
 }
 
-export function CollaborationSpace({ userId, activeContracts }: CollaborationSpaceProps) {
+// PERFORMANCE FIX: Memoized to prevent unnecessary re-renders (608 lines component)
+export const CollaborationSpace = React.memo(function CollaborationSpace({ userId, activeContracts }: CollaborationSpaceProps) {
   const [activeBoard, setActiveBoard] = useState<string | null>(null)
   const [drawingMode, setDrawingMode] = useState('pen')
   const [collaborators, setCollaborators] = useState([
@@ -605,4 +606,4 @@ export function CollaborationSpace({ userId, activeContracts }: CollaborationSpa
       </Tabs>
     </div>
   )
-}
+})
