@@ -120,6 +120,15 @@ useEffect(() => {
           </>
         )}
       </Button>
+
+      <div className="text-center">
+        <a
+          href="/recuperar-contrasena"
+          className="text-sm text-primary hover:text-primary/80 hover:underline"
+        >
+          ¿Olvidaste tu contraseña?
+        </a>
+      </div>
     </form>
   )
 }
