@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     // Note: This is simplified - in production you'd want to normalize currency
     const totalEarnings = quotations
       .filter(q => q.status === 'ACCEPTED')
-      .reduce((sum, q) => sum + q.totalCost, 0)
+      .reduce((sum, q) => sum + q.totalCost.toNumber(), 0)
 
     // 5. Get average rating from reviews
     const reviewsReceived = await prisma.review.findMany({
