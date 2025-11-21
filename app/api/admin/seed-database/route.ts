@@ -12,23 +12,33 @@ const INDUSTRIES = ['Manufacturing', 'Retail', 'Healthcare', 'Finance', 'Energy'
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar autenticación de admin
-    const session = await getServerSession(authOptions)
+    // BOOTSTRAP MODE: Check if database is empty (no users exist)
+    const userCount = await prisma.user.count()
+    const isBootstrap = userCount === 0
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'No autenticado. Debe iniciar sesión.' },
-        { status: 401 }
-      )
-    }
+    if (!isBootstrap) {
+      // Database has users - require admin authentication
+      const session = await getServerSession(authOptions)
 
-    // Verificar que el usuario es admin
-    const userType = session.user.userType as string
-    if (userType !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'No autorizado. Solo administradores pueden ejecutar el seed.' },
-        { status: 403 }
-      )
+      if (!session || !session.user) {
+        return NextResponse.json(
+          { error: 'No autenticado. Debe iniciar sesión.' },
+          { status: 401 }
+        )
+      }
+
+      // Verificar que el usuario es admin
+      const userType = session.user.userType as string
+      if (userType !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'No autorizado. Solo administradores pueden ejecutar el seed.' },
+          { status: 403 }
+        )
+      }
+
+      console.log('✅ [SEED] Admin authentication verified:', session.user.email)
+    } else {
+      console.log('🚀 [SEED] BOOTSTRAP MODE: Database is empty, allowing unauthenticated seed')
     }
 
     const results = {
@@ -80,7 +90,8 @@ export async function POST(request: NextRequest) {
             phoneNumber: '+34 91 123 4567'
           }
         }
-      }
+      },
+      include: { clientProfile: true }
     })
     results.users++
     results.clients++
@@ -228,7 +239,7 @@ export async function POST(request: NextRequest) {
             description: `Proyecto exitoso de implementación de módulos SAP ${modules.join(', ')} para empresa del sector ${industry}.`,
             industry,
             sapModules: modules,
-            projectValue: Math.floor(Math.random() * 400000) + 100000,
+            projectValue: `$${Math.floor(Math.random() * 400 + 100)}K`,
             duration: `${Math.floor(Math.random() * 10) + 3} meses`,
             methodology: 'SAP Activate',
             teamSize: `${Math.floor(Math.random() * 8) + 3} personas`,
@@ -244,9 +255,9 @@ export async function POST(request: NextRequest) {
 
     // 5. CREAR PROYECTOS
     const projectsData = [
-      { title: 'Implementación SAP S/4HANA Finance', modules: ['FI', 'CO'], type: 'new' as const, budget: 350000, timeline: 8, status: 'PUBLISHED' as const },
-      { title: 'Migración SAP ECC a S/4HANA', modules: ['FI', 'CO', 'MM', 'SD'], type: 'migration' as const, budget: 750000, timeline: 12, status: 'PUBLISHED' as const },
-      { title: 'Implementación SAP MM y SD', modules: ['MM', 'SD'], type: 'new' as const, budget: 280000, timeline: 6, status: 'PUBLISHED' as const }
+      { title: 'Implementación SAP S/4HANA Finance', modules: ['FI', 'CO'], type: 'new' as const, budget: '$350,000 USD', timeline: '8 meses', industry: 'Manufacturing', status: 'PUBLISHED' as const },
+      { title: 'Migración SAP ECC a S/4HANA', modules: ['FI', 'CO', 'MM', 'SD'], type: 'migration' as const, budget: '$750,000 USD', timeline: '12 meses', industry: 'Retail', status: 'PUBLISHED' as const },
+      { title: 'Implementación SAP MM y SD', modules: ['MM', 'SD'], type: 'new' as const, budget: '$280,000 USD', timeline: '6 meses', industry: 'Healthcare', status: 'PUBLISHED' as const }
     ]
 
     const projects = []
@@ -260,18 +271,15 @@ export async function POST(request: NextRequest) {
           title: projectData.title,
           description: `Proyecto de ${projectData.type} para implementar los módulos SAP ${projectData.modules.join(', ')}.`,
           requirements: `- Experiencia en módulos ${projectData.modules.join(', ')}\n- Certificaciones SAP vigentes\n- Metodología SAP Activate`,
+          industry: projectData.industry,
           implementationType: projectData.type,
           sapModules: projectData.modules,
           budget: projectData.budget,
-          budgetCurrency: 'USD',
           timeline: projectData.timeline,
-          timelineUnit: 'months',
-          preferredStartDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          location: client.clientProfile?.city || 'Remote',
+          teamSize: '3-5 personas',
+          country: client.clientProfile?.country || 'México',
+          city: client.clientProfile?.city || 'Ciudad de México',
           isRemote: true,
-          requiresCertification: true,
-          minimumTeamSize: 3,
-          expectedDeliverables: ['Análisis de procesos', 'Configuración', 'Migración de datos', 'Capacitación'],
           status: projectData.status,
           publishedAt: new Date(),
           createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000)
@@ -285,20 +293,24 @@ export async function POST(request: NextRequest) {
     for (const project of projects) {
       for (let i = 0; i < Math.min(2, providers.length); i++) {
         const provider = providers[i]
-        const basePrice = project.budget * (0.9 + Math.random() * 0.2)
+        // Parse budget to extract numeric value for cost calculation
+        const budgetMatch = project.budget.match(/[\d,]+/)
+        const budgetValue = budgetMatch ? parseFloat(budgetMatch[0].replace(/,/g, '')) : 100000
+        const basePrice = budgetValue * (0.9 + Math.random() * 0.2)
 
         await prisma.quotation.create({
           data: {
             projectId: project.id,
             providerId: provider.id,
-            coverLetter: `Estimado cliente, nos complace presentar nuestra propuesta para ${project.title}.`,
-            proposedTimeline: project.timeline,
-            proposedStartDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
-            teamSize: project.minimumTeamSize + 1,
+            title: `Propuesta para ${project.title}`,
+            description: `Propuesta detallada para la implementación de los módulos SAP ${project.sapModules.join(', ')}.`,
+            approach: `Utilizaremos metodología SAP Activate con un equipo de consultores certificados. Implementación por fases con entregables claros en cada hito.`,
+            timeline: project.timeline,
             methodology: 'SAP Activate',
             totalCost: basePrice,
             currency: 'USD',
             paymentTerms: '30% inicio, 40% implementación, 30% go-live',
+            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             status: 'PENDING',
             submittedAt: new Date()
           }
@@ -310,15 +322,18 @@ export async function POST(request: NextRequest) {
     // 7. CREAR REVIEWS
     for (let i = 0; i < providers.length; i++) {
       const provider = providers[i]
-      for (let j = 0; j < 2 && j < clients.length; j++) {
+      for (let j = 0; j < 2 && j < clients.length && j < projects.length; j++) {
         const client = clients[j]
+        const project = projects[j % projects.length]
         const rating = Math.floor(Math.random() * 2) + 4
 
         await prisma.review.create({
           data: {
+            projectId: project.id,
             reviewerId: client.id,
             targetId: provider.id,
-            rating,
+            reviewType: 'CLIENT_TO_PROVIDER',
+            overallRating: rating,
             comment: 'Excelente trabajo, muy profesionales y cumplieron con todos los plazos.',
             qualityRating: rating,
             timelinessRating: rating,
@@ -335,7 +350,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Base de datos poblada exitosamente',
+      message: isBootstrap
+        ? 'Base de datos inicializada exitosamente (Bootstrap mode)'
+        : 'Base de datos poblada exitosamente',
+      mode: isBootstrap ? 'bootstrap' : 'admin',
       results,
       credentials: {
         admin: { email: 'admin@servicephere.com', password: 'admin123' },

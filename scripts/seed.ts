@@ -56,6 +56,9 @@ async function main() {
           phoneNumber: '+34 91 123 4567'
         }
       }
+    },
+    include: {
+      clientProfile: true
     }
   })
   console.log('✅ Cliente demo creado:', demoClient.email)
@@ -322,7 +325,7 @@ async function main() {
           description: `Proyecto exitoso de implementación de módulos SAP ${modules.join(', ')} para empresa del sector ${industry}. Incluye análisis de procesos, configuración, migración de datos y capacitación de usuarios.`,
           industry,
           sapModules: modules,
-          projectValue: Math.floor(Math.random() * 400000) + 100000,
+          projectValue: `$${Math.floor(Math.random() * 400 + 100)}K`,
           duration: `${Math.floor(Math.random() * 10) + 3} meses`,
           methodology: 'SAP Activate',
           teamSize: `${Math.floor(Math.random() * 8) + 3} personas`,
@@ -349,48 +352,54 @@ async function main() {
       title: 'Implementación SAP S/4HANA Finance y Controlling',
       modules: ['FI', 'CO'],
       type: 'new' as const,
-      budget: 350000,
-      timeline: 8,
+      budget: '$350,000 USD',
+      timeline: '8 meses',
+      industry: 'Manufacturing',
       status: 'PUBLISHED' as const
     },
     {
       title: 'Migración de SAP ECC a S/4HANA completo',
       modules: ['FI', 'CO', 'MM', 'SD'],
       type: 'migration' as const,
-      budget: 750000,
-      timeline: 12,
+      budget: '$750,000 USD',
+      timeline: '12 meses',
+      industry: 'Retail',
       status: 'PUBLISHED' as const
     },
     {
       title: 'Implementación SAP MM y SD para distribución',
       modules: ['MM', 'SD'],
       type: 'new' as const,
-      budget: 280000,
-      timeline: 6,
+      budget: '$280,000 USD',
+      timeline: '6 meses',
+      industry: 'Logistics',
       status: 'PUBLISHED' as const
     },
     {
       title: 'Optimización de procesos SAP PP y QM',
       modules: ['PP', 'QM'],
       type: 'optimization' as const,
-      budget: 150000,
-      timeline: 4,
+      budget: '$150,000 USD',
+      timeline: '4 meses',
+      industry: 'Manufacturing',
       status: 'IN_PROGRESS' as const
     },
     {
       title: 'Upgrade SAP ECC 6.0 a ECC 7.0',
       modules: ['FI', 'CO', 'MM'],
       type: 'upgrade' as const,
-      budget: 420000,
-      timeline: 10,
+      budget: '$420,000 USD',
+      timeline: '10 meses',
+      industry: 'Finance',
       status: 'PUBLISHED' as const
     },
     {
       title: 'Implementación SAP SuccessFactors HCM',
       modules: ['HR'],
       type: 'new' as const,
-      budget: 200000,
-      timeline: 5,
+      budget: '$200,000 USD',
+      timeline: '5 meses',
+      industry: 'Healthcare',
       status: 'COMPLETED' as const
     }
   ]
@@ -405,27 +414,17 @@ async function main() {
         title: projectData.title,
         description: `Proyecto de ${projectData.type} para implementar/optimizar los módulos SAP ${projectData.modules.join(', ')}. Incluye análisis de procesos, configuración del sistema, migración de datos, capacitación de usuarios y soporte post go-live.`,
         requirements: `- Experiencia comprobada en módulos ${projectData.modules.join(', ')}\n- Certificaciones SAP vigentes\n- Equipo con al menos ${Math.floor(Math.random() * 5) + 3} consultores\n- Referencias verificables de proyectos similares\n- Metodología SAP Activate\n- Disponibilidad inmediata`,
+        industry: projectData.industry,
         implementationType: projectData.type,
         sapModules: projectData.modules,
         budget: projectData.budget,
-        budgetCurrency: 'USD',
         timeline: projectData.timeline,
-        timelineUnit: 'months',
-        preferredStartDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        location: client.clientProfile?.city || 'Remote',
+        teamSize: `${Math.floor(Math.random() * 3) + 2}-${Math.floor(Math.random() * 5) + 5} personas`,
+        country: client.clientProfile?.country || 'México',
+        city: client.clientProfile?.city || 'Ciudad de México',
         isRemote: Math.random() > 0.5,
-        requiresCertification: true,
-        minimumTeamSize: Math.floor(Math.random() * 3) + 2,
-        expectedDeliverables: [
-          'Documento de análisis de procesos',
-          'Configuración del sistema',
-          'Migración de datos',
-          'Documentación técnica y funcional',
-          'Capacitación de usuarios clave',
-          'Soporte post go-live (3 meses)'
-        ],
         status: projectData.status,
-        publishedAt: projectData.status !== 'DRAFT' ? new Date() : null,
+        publishedAt: ['PUBLISHED', 'IN_PROGRESS', 'COMPLETED'].includes(projectData.status) ? new Date() : null,
         createdAt: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000)
       }
     })
@@ -445,20 +444,24 @@ async function main() {
 
     for (let i = 0; i < numQuotations && i < providers.length; i++) {
       const provider = providers[i]
-      const basePrice = project.budget * (0.8 + Math.random() * 0.4) // ±20% del presupuesto
+      // Parse budget to extract numeric value for cost calculation
+      const budgetMatch = project.budget.match(/[\d,]+/)
+      const budgetValue = budgetMatch ? parseFloat(budgetMatch[0].replace(/,/g, '')) : 100000
+      const basePrice = budgetValue * (0.8 + Math.random() * 0.4) // ±20% del presupuesto
 
       const quotation = await prisma.quotation.create({
         data: {
           projectId: project.id,
           providerId: provider.id,
-          coverLetter: `Estimado cliente,\n\nNos complace presentar nuestra propuesta para ${project.title}. Contamos con amplia experiencia en implementaciones similares y un equipo altamente calificado.\n\nNuestra propuesta incluye un enfoque integral que garantiza el éxito del proyecto dentro de los plazos establecidos.\n\nQuedamos atentos a sus comentarios.\n\nSaludos cordiales,\n${provider.name}`,
-          proposedTimeline: project.timeline + Math.floor(Math.random() * 2),
-          proposedStartDate: new Date(Date.now() + (Math.random() * 45 + 15) * 24 * 60 * 60 * 1000),
-          teamSize: project.minimumTeamSize + Math.floor(Math.random() * 3),
+          title: `Propuesta para ${project.title}`,
+          description: `Propuesta detallada para la implementación de los módulos SAP ${project.sapModules.join(', ')}. Incluye análisis de procesos, configuración del sistema, migración de datos, capacitación de usuarios y soporte post go-live.`,
+          approach: `Utilizaremos metodología SAP Activate con un equipo de consultores certificados. La implementación se realizará por fases con entregables claros en cada hito. Nuestro equipo cuenta con amplia experiencia en proyectos similares.`,
+          timeline: project.timeline,
           methodology: 'SAP Activate',
           totalCost: basePrice,
           currency: 'USD',
           paymentTerms: '30% inicio, 40% durante implementación, 30% go-live',
+          validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           status: i === 0 && project.status === 'IN_PROGRESS' ? 'ACCEPTED' : 'PENDING',
           submittedAt: new Date(project.createdAt.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000)
         }
@@ -476,8 +479,9 @@ async function main() {
     const provider = providers[i]
     const numReviews = Math.floor(Math.random() * 4) + 2 // 2-5 reviews por proveedor
 
-    for (let j = 0; j < numReviews && j < allClients.length; j++) {
+    for (let j = 0; j < numReviews && j < allClients.length && j < projects.length; j++) {
       const client = allClients[j]
+      const project = projects[j % projects.length]
       const rating = Math.floor(Math.random() * 2) + 4 // 4-5 estrellas
 
       const comments = [
@@ -490,9 +494,11 @@ async function main() {
 
       await prisma.review.create({
         data: {
+          projectId: project.id,
           reviewerId: client.id,
           targetId: provider.id,
-          rating,
+          reviewType: 'CLIENT_TO_PROVIDER',
+          overallRating: rating,
           comment: comments[Math.floor(Math.random() * comments.length)],
           qualityRating: rating,
           timelinessRating: Math.min(5, rating + Math.floor(Math.random() * 2)),
