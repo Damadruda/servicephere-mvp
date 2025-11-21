@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
             phoneNumber: '+34 91 123 4567'
           }
         }
-      }
+      },
+      include: { clientProfile: true }
     })
     results.users++
     results.clients++
