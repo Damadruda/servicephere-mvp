@@ -56,6 +56,9 @@ async function main() {
           phoneNumber: '+34 91 123 4567'
         }
       }
+    },
+    include: {
+      clientProfile: true
     }
   })
   console.log('✅ Cliente demo creado:', demoClient.email)
