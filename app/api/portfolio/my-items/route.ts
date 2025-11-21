@@ -57,11 +57,11 @@ export async function GET(request: NextRequest) {
       projectValue: item.projectValue,
       duration: item.duration,
       methodology: item.methodology,
-      outcome: item.outcome,
-      technologies: item.technologies,
       teamSize: item.teamSize,
-      role: item.role,
-      challenges: item.challenges,
+      clientTestimonial: item.clientTestimonial,
+      screenshot: item.screenshot,
+      startDate: item.startDate,
+      endDate: item.endDate,
       isPublic: item.isPublic,
       createdAt: item.createdAt
     }))
