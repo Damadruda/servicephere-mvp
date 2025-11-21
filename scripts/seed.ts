@@ -20,10 +20,10 @@ async function main() {
 
   const adminPassword = bcrypt.hashSync('admin123', 12)
   const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@sapmarketplace.com' },
+    where: { email: 'admin@servicephere.com' },
     update: {},
     create: {
-      email: 'admin@sapmarketplace.com',
+      email: 'admin@servicephere.com',
       password: adminPassword,
       name: 'Admin Sistema',
       userType: 'ADMIN',
@@ -526,7 +526,7 @@ async function main() {
   console.log('🔑 CREDENCIALES DE ACCESO')
   console.log('='.repeat(60))
   console.log('\n⚙️  ADMINISTRADOR:')
-  console.log('   Email: admin@sapmarketplace.com')
+  console.log('   Email: admin@servicephere.com')
   console.log('   Password: admin123')
 
   console.log('\n👤 CLIENTE DEMO:')
