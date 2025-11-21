@@ -12,23 +12,33 @@ const INDUSTRIES = ['Manufacturing', 'Retail', 'Healthcare', 'Finance', 'Energy'
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar autenticación de admin
-    const session = await getServerSession(authOptions)
+    // BOOTSTRAP MODE: Check if database is empty (no users exist)
+    const userCount = await prisma.user.count()
+    const isBootstrap = userCount === 0
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'No autenticado. Debe iniciar sesión.' },
-        { status: 401 }
-      )
-    }
+    if (!isBootstrap) {
+      // Database has users - require admin authentication
+      const session = await getServerSession(authOptions)
 
-    // Verificar que el usuario es admin
-    const userType = session.user.userType as string
-    if (userType !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'No autorizado. Solo administradores pueden ejecutar el seed.' },
-        { status: 403 }
-      )
+      if (!session || !session.user) {
+        return NextResponse.json(
+          { error: 'No autenticado. Debe iniciar sesión.' },
+          { status: 401 }
+        )
+      }
+
+      // Verificar que el usuario es admin
+      const userType = session.user.userType as string
+      if (userType !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'No autorizado. Solo administradores pueden ejecutar el seed.' },
+          { status: 403 }
+        )
+      }
+
+      console.log('✅ [SEED] Admin authentication verified:', session.user.email)
+    } else {
+      console.log('🚀 [SEED] BOOTSTRAP MODE: Database is empty, allowing unauthenticated seed')
     }
 
     const results = {
@@ -340,7 +350,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Base de datos poblada exitosamente',
+      message: isBootstrap
+        ? 'Base de datos inicializada exitosamente (Bootstrap mode)'
+        : 'Base de datos poblada exitosamente',
+      mode: isBootstrap ? 'bootstrap' : 'admin',
       results,
       credentials: {
         admin: { email: 'admin@servicephere.com', password: 'admin123' },
