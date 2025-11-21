@@ -424,7 +424,7 @@ async function main() {
         city: client.clientProfile?.city || 'Ciudad de México',
         isRemote: Math.random() > 0.5,
         status: projectData.status,
-        publishedAt: projectData.status !== 'DRAFT' ? new Date() : null,
+        publishedAt: ['PUBLISHED', 'IN_PROGRESS', 'COMPLETED'].includes(projectData.status) ? new Date() : null,
         createdAt: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000)
       }
     })
