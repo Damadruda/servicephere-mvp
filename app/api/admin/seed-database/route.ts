@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
             description: `Proyecto exitoso de implementación de módulos SAP ${modules.join(', ')} para empresa del sector ${industry}.`,
             industry,
             sapModules: modules,
-            projectValue: Math.floor(Math.random() * 400000) + 100000,
+            projectValue: `$${Math.floor(Math.random() * 400 + 100)}K`,
             duration: `${Math.floor(Math.random() * 10) + 3} meses`,
             methodology: 'SAP Activate',
             teamSize: `${Math.floor(Math.random() * 8) + 3} personas`,
