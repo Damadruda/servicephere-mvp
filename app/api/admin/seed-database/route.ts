@@ -15,7 +15,16 @@ export async function POST(request: NextRequest) {
     // Verificar autenticación de admin
     const session = await getServerSession(authOptions)
 
-    if (!session || session.user.userType !== 'ADMIN') {
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { error: 'No autenticado. Debe iniciar sesión.' },
+        { status: 401 }
+      )
+    }
+
+    // Verificar que el usuario es admin
+    const userType = session.user.userType as string
+    if (userType !== 'ADMIN') {
       return NextResponse.json(
         { error: 'No autorizado. Solo administradores pueden ejecutar el seed.' },
         { status: 403 }
